@@ -16,9 +16,6 @@ export default function Home() {
       <p>Launching January 1, 2026</p>
       <p>A living digital graffiti wall.<br />
          Memory, spray-painted — not erased.</p>
-      <p style={{ marginTop: '30px', fontSize: '0.9rem', opacity: 0.6 }}>
-        ✅ GitHub: <code>streetwalldev/streetwall</code>
-      </p>
     </main>
   );
 }
