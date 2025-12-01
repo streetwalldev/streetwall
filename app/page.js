@@ -26,12 +26,10 @@ export default function Home() {
         overflow: 'hidden',
         border: '1px solid #444',
       }}>
-        <img
-          src="/placeholder.png"
-          alt="Street Wall Preview"
-          width="500"
-          height="500"
-          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+        <img 
+          src="https://raw.githubusercontent.com/streetwalldev/streetwall/main/public/placeholder.png"
+          alt="preview"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
 
