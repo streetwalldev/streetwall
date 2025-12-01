@@ -1,11 +1,9 @@
-// app/page.js — остаётся Server Component (без "use client")
-import VideoPlaceholder from './VideoPlaceholder';
-
+// app/page.js
 export default function Home() {
   return (
     <main style={{
       padding: '20px',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
       background: '#000',
       color: '#fff',
       minHeight: '100vh',
@@ -14,6 +12,7 @@ export default function Home() {
       justifyContent: 'center',
       alignItems: 'center',
       textAlign: 'center',
+      boxSizing: 'border-box',
     }}>
       <h1 style={{ margin: '0 0 12px', fontSize: '2.4rem', fontWeight: '700' }}>
         Street Wall
@@ -25,9 +24,30 @@ export default function Home() {
         A living digital graffiti wall.
       </p>
 
-      {/* ▼ Видео-плейсхолдер — теперь как отдельный Client Component ▼ */}
-      <VideoPlaceholder />
+      {/* ▼ Статичная картинка-плейсхолдер 500×500 px ▼ */}
+      <div style={{
+        width: '500px',
+        height: '500px',
+        margin: '0 auto 40px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '1px solid #333',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+        backgroundColor: '#111', // fallback, если изображение не загрузилось
+      }}>
+        <img
+          src="/placeholder.png"
+          alt="StreetWall preview"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      </div>
 
+      {/* Кнопка */}
       <a
         href="https://t.me/streetwallart"
         target="_blank"
