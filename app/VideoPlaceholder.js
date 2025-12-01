@@ -29,7 +29,7 @@ export default function VideoPlaceholder() {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          zIndex: 1,
+          zIndex: 2,
         }}
       />
       {/* Video — поверх изображения */}
@@ -46,7 +46,7 @@ export default function VideoPlaceholder() {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          zIndex: 2,
+          zIndex: 1,
         }}
         onError={handleError}  // ← теперь можно!
       >
