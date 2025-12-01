@@ -36,14 +36,10 @@ export default function Home() {
         boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
         backgroundColor: '#111',
       }}>
-        <img
-          src="/placeholder.png"
-          alt="StreetWall preview"
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block',
-          }}
+        <img 
+          src="https://raw.githubusercontent.com/streetwalldev/streetwall/main/public/placeholder.png"
+          alt="preview"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
 
