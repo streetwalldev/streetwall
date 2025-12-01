@@ -13,7 +13,7 @@ export default function Home() {
       textAlign: 'center'
     }}>
       <h1>Street Wall</h1>
-      <p>Launching January 1, 2026</p>
+      <p>Launching, 2026</p>
       <p>A living digital graffiti wall.<br />
          Memory, spray-painted — not erased.</p>
     </main>
