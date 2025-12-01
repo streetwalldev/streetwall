@@ -3,7 +3,7 @@ export default function Home() {
   return (
     <main style={{
       padding: '20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       background: '#000',
       color: '#fff',
       minHeight: '100vh',
@@ -12,58 +12,42 @@ export default function Home() {
       justifyContent: 'center',
       alignItems: 'center',
       textAlign: 'center',
-      boxSizing: 'border-box',
     }}>
-      <h1 style={{ margin: '0 0 12px', fontSize: '2.4rem', fontWeight: '700' }}>
-        Street Wall
-      </h1>
-      <p style={{ margin: '0 0 6px', fontSize: '1.2rem', opacity: 0.85 }}>
-        Coming Soon, in 2026
-      </p>
-      <p style={{ margin: '0 0 40px', fontSize: '1rem', opacity: 0.7 }}>
-        A living digital graffiti wall.
-      </p>
+      <h1>Street Wall</h1>
+      <p>Coming Soon, in 2026</p>
+      <p>A living digital graffiti wall.</p>
 
-      {/* ▼ Статичная картинка-плейсхолдер 500×500 px ▼ */}
+      {/* ▼ Картинка — 500×500 px ▼ */}
       <div style={{
         width: '500px',
         height: '500px',
-        margin: '0 auto 40px',
+        margin: '40px auto',
         borderRadius: '8px',
         overflow: 'hidden',
-        border: '1px solid #333',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        backgroundColor: '#111', // fallback, если изображение не загрузилось
+        border: '1px solid #444',
       }}>
         <img
           src="/placeholder.png"
-          alt="StreetWall preview"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          }}
+          alt="Street Wall Preview"
+          width="500"
+          height="500"
+          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
 
-      {/* Кнопка */}
       <a
         href="https://t.me/streetwallart"
         target="_blank"
         rel="noopener noreferrer"
         style={{
-          padding: '14px 32px',
-          background: '#ff2d55',
+          padding: '12px 24px',
+          background: '#ff3366',
           color: 'white',
           textDecoration: 'none',
-          borderRadius: '6px',
-          fontWeight: '600',
-          fontSize: '1.05rem',
-          display: 'inline-block',
+          borderRadius: '4px',
         }}
       >
-        Notify Me in Telegram
+        Notify In Telegram
       </a>
     </main>
   );
