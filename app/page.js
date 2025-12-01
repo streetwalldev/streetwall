@@ -31,11 +31,12 @@ export default function Home() {
         overflow: 'hidden',
         border: '1px solid #444',
         boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+        backgroundColor: '#111', // fallback для мгновенного отображения
       }}>
-        {/* Placeholder image */}
+        {/* Placeholder image — показывается до загрузки видео */}
         <img
           src="/placeholder.png"
-          alt="Street Wall Art Preview"
+          alt="StreetWall Art preview placeholder"
           style={{
             position: 'absolute',
             top: 0,
@@ -46,12 +47,13 @@ export default function Home() {
             zIndex: 1,
           }}
         />
-        {/* Video (plays on top of image) */}
+        {/* Видео — поверх изображения */}
         <video
           autoPlay
           muted
           loop
           playsInline
+          preload="metadata"
           style={{
             position: 'absolute',
             top: 0,
@@ -81,7 +83,7 @@ export default function Home() {
           display: 'inline-block',
         }}
       >
-        🔔 Notify Me (Telegram)
+        Notify Me in Telegram
       </a>
     </main>
   );
