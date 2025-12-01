@@ -1,79 +1,41 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
-
+// app/page.js
 export default function Home() {
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const playVideo = async () => {
-      try {
-        await video.play();
-      } catch (err) {
-        console.warn('Autoplay prevented:', err);
-      }
-    };
-
-    playVideo();
-
-    const handleUserGesture = () => {
-      playVideo();
-      window.removeEventListener('click', handleUserGesture);
-      window.removeEventListener('touchstart', handleUserGesture);
-    };
-
-    window.addEventListener('click', handleUserGesture);
-    window.addEventListener('touchstart', handleUserGesture);
-
-    return () => {
-      window.removeEventListener('click', handleUserGesture);
-      window.removeEventListener('touchstart', handleUserGesture);
-    };
-  }, []);
-
   return (
-    <main
-      style={{
-        padding: '20px',
-        fontFamily: 'system-ui, sans-serif',
-        background: '#0a0a0a',
-        color: '#fff',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        textAlign: 'center',
-        gap: '30px',
-      }}
-    >
-      <h1 style={{ fontSize: '2.2rem', margin: 0, fontWeight: 700 }}>
-        🏴‍☠️ StreetWall Art
+    <main style={{
+      padding: '20px',
+      fontFamily: 'system-ui, sans-serif',
+      background: '#000',
+      color: '#fff',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      textAlign: 'center',
+    }}>
+      <h1 style={{ margin: '0 0 20px', fontSize: '2rem' }}>
+        Street Wall
       </h1>
-      <p style={{ opacity: 0.7, maxWidth: '600px', margin: 0 }}>
-        A living digital graffiti wall. Memory, spray-painted — not erased.
+      <p style={{ opacity: 0.8, marginBottom: '30px' }}>
+        Coming Soon, in 2026<br />
+        A living digital graffiti wall.
       </p>
 
-      {/* Media Box: 500×500 */}
-      <div
-        style={{
-          position: 'relative',
-          width: '500px',
-          height: '500px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          border: '1px solid #333',
-          background: '#111',
-        }}
-      >
+      {/* ▼ Видео-плейсхолдер 500×500 px ▼ */}
+      <div style={{
+        position: 'relative',
+        width: '500px',
+        height: '500px',
+        margin: '0 auto 40px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '1px solid #444',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+      }}>
         {/* Placeholder image */}
         <img
           src="/placeholder.png"
-          alt="StreetWall Art — digital graffiti preview"
+          alt="Street Wall Art Preview"
           style={{
             position: 'absolute',
             top: 0,
@@ -84,14 +46,11 @@ export default function Home() {
             zIndex: 1,
           }}
         />
-
-        {/* Video on top */}
+        {/* Video (plays on top of image) */}
         <video
-          ref={videoRef}
-          src="/preview.mp4"
           autoPlay
-          loop
           muted
+          loop
           playsInline
           style={{
             position: 'absolute',
@@ -102,12 +61,28 @@ export default function Home() {
             objectFit: 'cover',
             zIndex: 2,
           }}
-        />
+        >
+          <source src="/preview.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
       </div>
 
-      <p style={{ fontSize: '0.9rem', opacity: 0.5, marginTop: '10px' }}>
-        Launching January 1, 2026 · <code>streetwall.art</code>
-      </p>
+      <a
+        href="https://t.me/streetwallart"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          padding: '12px 24px',
+          background: '#ff3366',
+          color: 'white',
+          textDecoration: 'none',
+          borderRadius: '4px',
+          fontWeight: 'bold',
+          display: 'inline-block',
+        }}
+      >
+        🔔 Notify Me (Telegram)
+      </a>
     </main>
   );
 }
