@@ -12,7 +12,7 @@ export default function Home() {
       alignItems: 'center',
       textAlign: 'center'
     }}>
-      <h1>🎨 StreetWall Art</h1>
+      <h1>StreetWall Art</h1>
       <p>Launching January 1, 2026</p>
       <p>A living digital graffiti wall.<br />
          Memory, spray-painted — not erased.</p>
