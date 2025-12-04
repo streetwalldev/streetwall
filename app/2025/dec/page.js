@@ -1,187 +1,270 @@
-// app/2025/dec/page.js
+// app/2026/jan/page.js
 'use client';
 
 export default function January2026Page() {
   return (
-    <html lang="ru">
-      <head>
-        <meta charSet="UTF-8" />
-        <title>StreetWall Art — January 2026</title>
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              body { background: #222; margin: 0; height: 100vh; overflow: hidden; }
-              #ui { position: absolute; top: 20px; left: 20px; z-index: 10; color: #fff; }
-              #paintLeft { font-weight: bold; }
-              canvas { border: 2px solid #fff; background: #333; cursor: crosshair; display: block; margin: 0 auto; }
-            `,
-          }}
-        />
-      </head>
-      <body>
-        <div id="ui">
-          Цвет:
-          <input type="color" id="colorPicker" value="#ff3c00" />
-          Осталось краски: <span id="paintLeft">5000</span>
-          <button onclick="resetCanvas()">Очистить</button>
+    <div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            body { background: #222; margin: 0; min-height: 100vh; font-family: system-ui, sans-serif; }
+            #main-ui {
+              position: relative;
+              width: 100vw;
+              max-width: 900px;
+              margin: 20px auto;
+              z-index: 10;
+              color: #fff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 14px;
+            }
+            .controls-row {
+              display: flex;
+              gap: 18px;
+              align-items: center;
+              flex-wrap: wrap;
+              background: rgba(40, 40, 40, 0.93);
+              border-radius: 9px;
+              padding: 12px 18px;
+              margin-bottom: 6px;
+              width: 100%;
+              box-sizing: border-box;
+            }
+            label {
+              font-size: 1rem;
+              margin-right: 5px;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+            input[type="range"] {
+              width: 100px;
+            }
+            #paintLeft {
+              font-weight: bold;
+            }
+            #canvas-wrap {
+              position: relative;
+              width: 100%;
+              max-width: 900px;
+            }
+            #canvas {
+              position: relative;
+              z-index: 2;
+              display: block;
+              width: 100%;
+              height: auto;
+              border-radius: 8px;
+              border: 2px solid #fff;
+              background: #111;
+            }
+            @media (max-width: 700px) {
+              #main-ui {
+                max-width: none;
+                padding: 0 16px;
+              }
+              #canvas-wrap {
+                max-width: none;
+              }
+              .controls-row {
+                flex-direction: column;
+                align-items: flex-start;
+              }
+            }
+          `,
+        }}
+      />
+
+      <div id="main-ui">
+        <div className="controls-row" id="controls">
+          <label>
+            Цвет:
+            <input type="color" id="colorPicker" value="#ff3c00" />
+          </label>
+          <label>
+            Размер кисти:
+            <input type="range" id="radiusRange" min="5" max="80" value="30" />
+            <span id="radiusVal">30</span>
+          </label>
+          <label>
+            Плотность:
+            <input type="range" id="densityRange" min="50" max="1200" value="556" />
+            <span id="densityVal">556</span>
+          </label>
+          <label>
+            Подложка:
+            <input type="file" id="bgImageInput" accept="image/*" />
+          </label>
+          <button id="resetBtn">Очистить</button>
+          <span>Осталось краски: <span id="paintLeft">2000000</span></span>
         </div>
-        <canvas id="canvas" width="800" height="600"></canvas>
 
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              const canvas = document.getElementById('canvas');
-              const ctx = canvas.getContext('2d');
-              const colorPicker = document.getElementById('colorPicker');
-              const paintLeftSpan = document.getElementById('paintLeft');
+        <div id="canvas-wrap">
+          <canvas id="canvas"></canvas>
+        </div>
+      </div>
 
-              let sprayRadius = 30;
-              let dotSize = [0.8, 1.1];
-              let dotsPerTick = 556;
-              let paintMax = 2000000;
-              let paintLeft = paintMax;
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            // ——— Настройки ———
+            let config = {
+              paintMax: 2000000,
+              paintLeft: 2000000,
+              radius: 30,
+              density: 556,
+              color: '#ff3c00',
+              dotSize: [0.8, 1.1],
+              bgImage: null
+            };
 
-              let currentColor = colorPicker.value;
-              let drawing = false;
-              let lastSprayPos = null;
-              let lastSprayTime = null;
-              let paintedPixels = new Set();
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+            let paintedPixels = new Set();
 
-              function getRandomInt(a, b) {
-                return Math.random() * (b - a) + a;
+            // Адаптивный размер canvas
+            function resizeCanvas() {
+              const maxWidth = Math.min(window.innerWidth - 32, 900);
+              const w = maxWidth;
+              const h = Math.max(280, Math.min(window.innerHeight - 140, w * 0.75));
+              canvas.width = w;
+              canvas.height = h;
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // ——— UI обновление ———
+            const colorPicker = document.getElementById('colorPicker');
+            const radiusRange = document.getElementById('radiusRange');
+            const densityRange = document.getElementById('densityRange');
+            const radiusVal = document.getElementById('radiusVal');
+            const densityVal = document.getElementById('densityVal');
+            const paintLeftEl = document.getElementById('paintLeft');
+            const bgImageInput = document.getElementById('bgImageInput');
+            const resetBtn = document.getElementById('resetBtn');
+
+            colorPicker.addEventListener('input', (e) => {
+              config.color = e.target.value;
+            });
+            radiusRange.addEventListener('input', (e) => {
+              config.radius = +e.target.value;
+              radiusVal.textContent = config.radius;
+            });
+            densityRange.addEventListener('input', (e) => {
+              config.density = +e.target.value;
+              densityVal.textContent = config.density;
+            });
+
+            // Загрузка фона
+            bgImageInput.addEventListener('change', (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              const url = URL.createObjectURL(file);
+              const img = new Image();
+              img.onload = () => {
+                config.bgImage = img;
+                redraw();
+              };
+              img.src = url;
+            });
+
+            // Очистка
+            resetBtn.addEventListener('click', () => {
+              config.bgImage = null;
+              paintedPixels.clear();
+              config.paintLeft = config.paintMax;
+              paintLeftEl.textContent = config.paintLeft;
+              redraw();
+            });
+
+            // ——— Отрисовка ———
+            function redraw() {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              if (config.bgImage) {
+                ctx.drawImage(config.bgImage, 0, 0, canvas.width, canvas.height);
               }
+            }
 
-              function resetCanvas() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                paintLeft = paintMax;
-                paintedPixels.clear();
-                paintLeftSpan.textContent = paintLeft;
-              }
+            // ——— Spray ———
+            function sprayAt(x, y) {
+              if (config.paintLeft <= 0) return;
 
-              function stopDrawing() {
-                drawing = false;
-                lastSprayPos = null;
-                lastSprayTime = null;
-              }
+              for (let i = 0; i < config.density; i++) {
+                if (config.paintLeft <= 0) break;
 
-              colorPicker.addEventListener('input', function() {
-                currentColor = this.value;
-              });
+                const angle = Math.random() * 2 * Math.PI;
+                const dist = Math.random() * config.radius;
+                const dx = Math.cos(angle) * dist;
+                const dy = Math.sin(angle) * dist;
+                const size =
+                  config.dotSize[0] + Math.random() * (config.dotSize[1] - config.dotSize[0]);
 
-              function sprayAt(x, y) {
-                let now = performance.now();
-                let speed = 0;
-                if (lastSprayPos && lastSprayTime !== null) {
-                  let dt = now - lastSprayTime;
-                  let dist = Math.hypot(x - lastSprayPos.x, y - lastSprayPos.y);
-                  speed = dist / (dt || 1);
-                  speed = Math.min(1, speed / 7);
+                // Рисуем точку
+                ctx.globalAlpha = Math.random() * (0.6 - 0.12) + 0.12;
+                ctx.fillStyle = config.color;
+                ctx.beginPath();
+                ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Учёт уникальных пикселей
+                const px = Math.round(x + dx);
+                const py = Math.round(y + dy);
+                const key = px + ',' + py;
+                if (!paintedPixels.has(key)) {
+                  paintedPixels.add(key);
+                  config.paintLeft--;
                 }
-
-                let minDot = dotSize[0], maxDot = dotSize[1];
-                let dotMin = Math.max(1, minDot * 0.7);
-                let dotMax = maxDot;
-                let dotFromSpeed = dotMax - (dotMax - dotMin) * speed;
-
-                let minRadius = sprayRadius * 0.7;
-                let maxRadius = sprayRadius * 3;
-                let radiusFromSpeed = minRadius + (maxRadius - minRadius) * speed;
-
-                let minAlpha = 0.12, maxAlpha = 0.6;
-                let alphaFromSpeed = maxAlpha - (maxAlpha - minAlpha) * speed;
-
-                for (let i = 0; i < dotsPerTick; i++) {
-                  let angle = Math.random() * 2 * Math.PI;
-                  let r = Math.random() * radiusFromSpeed;
-                  let dx = Math.cos(angle) * r;
-                  let dy = Math.sin(angle) * r;
-                  let size = getRandomInt(dotFromSpeed * 0.85, dotFromSpeed);
-
-                  ctx.globalAlpha = alphaFromSpeed * (0.8 + Math.random() * 0.3);
-                  ctx.fillStyle = currentColor;
-                  ctx.beginPath();
-                  ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
-                  ctx.fill();
-
-                  // --- Подтеки ---
-                  let cellX = Math.round(x + dx);
-                  let cellY = Math.round(y + dy);
-                  let cellKey = cellX + "_" + cellY;
-                  if (!sprayAt.dripMap) sprayAt.dripMap = {};
-                  let dripMap = sprayAt.dripMap;
-                  dripMap[cellKey] = (dripMap[cellKey] || 0) + 1;
-
-                  let drops = dripMap[cellKey];
-                  if (drops > 15 && drops % 3 === 0) {
-                    let maxDripLen = 30;
-                    let dripLen = Math.min(maxDripLen, Math.sqrt(drops - 14) * 4 + getRandomInt(-1,2));
-                    ctx.save();
-                    ctx.globalAlpha = 0.13 + Math.random()*0.07;
-                    ctx.strokeStyle = currentColor;
-                    ctx.lineWidth = size * getRandomInt(0.7,1.5);
-                    ctx.beginPath();
-                    ctx.moveTo(cellX + getRandomInt(-1,1), cellY + size/2);
-                    ctx.lineTo(cellX + getRandomInt(-1,1), cellY + size/2 + dripLen);
-                    ctx.stroke();
-                    ctx.restore();
-                  }
-
-                  let px = Math.round(x + dx);
-                  let py = Math.round(y + dy);
-                  let key = px + "_" + py;
-                  if (!paintedPixels.has(key)) {
-                    paintedPixels.add(key);
-                    paintLeft--;
-                    if (paintLeft <= 0) stopDrawing();
-                  }
-                }
-                ctx.globalAlpha = 1;
-                paintLeftSpan.textContent = Math.max(0, paintLeft);
-                lastSprayPos = {x, y};
-                lastSprayTime = now;
               }
 
-              canvas.addEventListener('mousedown', function(e){
-                if (paintLeft <= 0) return;
-                drawing = true;
-                lastSprayPos = null;
-                lastSprayTime = null;
-              });
-              canvas.addEventListener('mouseup', stopDrawing);
-              canvas.addEventListener('mouseleave', stopDrawing);
+              paintLeftEl.textContent = config.paintLeft;
+            }
 
-              canvas.addEventListener('mousemove', function(e){
-                if (!drawing || paintLeft <= 0) return;
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                sprayAt(x, y);
-              });
+            // Координаты курсора
+            function getCanvasCoords(e) {
+              const rect = canvas.getBoundingClientRect();
+              let clientX, clientY;
+              if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+              } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+              }
+              const x = ((clientX - rect.left) / rect.width) * canvas.width;
+              const y = ((clientY - rect.top) / rect.height) * canvas.height;
+              return { x, y };
+            }
 
-              canvas.addEventListener('touchstart', function(e){
-                if (paintLeft <= 0) return;
-                drawing = true;
-                lastSprayPos = null;
-                lastSprayTime = null;
-              });
-              canvas.addEventListener('touchend', stopDrawing);
-              canvas.addEventListener('touchcancel', stopDrawing);
+            // Обработчики
+            canvas.addEventListener('pointerdown', (e) => {
+              e.preventDefault();
+              isDrawing = true;
+              const { x, y } = getCanvasCoords(e);
+              sprayAt(x, y);
+            });
 
-              canvas.addEventListener('touchmove', function(e){
-                if (!drawing || paintLeft <= 0) return;
-                const rect = canvas.getBoundingClientRect();
-                const t = e.touches[0];
-                const x = t.clientX - rect.left;
-                const y = t.clientY - rect.top;
-                sprayAt(x, y);
-                e.preventDefault();
-              }, {passive:false});
+            canvas.addEventListener('pointermove', (e) => {
+              if (!isDrawing) return;
+              e.preventDefault();
+              const { x, y } = getCanvasCoords(e);
+              sprayAt(x, y);
+            });
 
-              resetCanvas();
-            `,
-          }}
-        />
-      </body>
-    </html>
+            window.addEventListener('pointerup', () => {
+              isDrawing = false;
+            });
+
+            // Инициализация UI
+            radiusVal.textContent = config.radius;
+            densityVal.textContent = config.density;
+            paintLeftEl.textContent = config.paintLeft;
+          `,
+        }}
+      />
+    </div>
   );
 }
