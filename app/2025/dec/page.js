@@ -55,6 +55,8 @@ export default function HomePage() {
               height: 600px;
               border: 2px solid #fff;
               background: #111;
+              /* 🔒 Отключаем скролл при касании на мобильных */
+              touch-action: none;
             }
             @media (max-width: 820px) {
               #canvas-wrap,
@@ -154,7 +156,6 @@ export default function HomePage() {
               redraw();
             });
 
-            // Перерисовка
             function redraw() {
               ctx.clearRect(0, 0, 800, 600);
               if (config.bgImage) {
@@ -162,7 +163,6 @@ export default function HomePage() {
               }
             }
 
-            // Spray
             function sprayAt(x, y) {
               if (config.paintLeft <= 0) return;
 
@@ -181,7 +181,6 @@ export default function HomePage() {
                 ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
                 ctx.fill();
 
-                // Учёт уникальных пикселей
                 const px = Math.round(x + dx);
                 const py = Math.round(y + dy);
                 const key = px + ',' + py;
@@ -194,21 +193,37 @@ export default function HomePage() {
               paintLeftEl.textContent = config.paintLeft;
             }
 
-            // Координаты
+            // 🔑 Ключевая функция: получение координат с коррекцией скролла
             function getCanvasCoords(e) {
               const rect = canvas.getBoundingClientRect();
-              let clientX = e.clientX, clientY = e.clientY;
-              if (e.touches?.length) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-              }
+              let clientX = e.clientX || (e.touches?.[0]?.clientX);
+              let clientY = e.clientY || (e.touches?.[0]?.clientY);
               return {
                 x: clientX - rect.left,
                 y: clientY - rect.top
               };
             }
 
-            // Обработчики
+            // 🔒 Отключаем скролл/пан при касании на мобильных
+            canvas.addEventListener('touchstart', e => {
+              e.preventDefault(); // 🔒 блокируем пан/скролл
+              isDrawing = true;
+              const { x, y } = getCanvasCoords(e);
+              sprayAt(x, y);
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', e => {
+              if (!isDrawing) return;
+              e.preventDefault(); // 🔒 критично для отмены пана
+              const { x, y } = getCanvasCoords(e);
+              sprayAt(x, y);
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', () => {
+              isDrawing = false;
+            });
+
+            // Десктоп: мышь
             canvas.addEventListener('pointerdown', e => {
               e.preventDefault();
               isDrawing = true;
@@ -218,7 +233,6 @@ export default function HomePage() {
 
             canvas.addEventListener('pointermove', e => {
               if (!isDrawing) return;
-              e.preventDefault();
               const { x, y } = getCanvasCoords(e);
               sprayAt(x, y);
             });
@@ -227,7 +241,7 @@ export default function HomePage() {
               isDrawing = false;
             });
 
-            // Инициализация
+            // Инициализация UI
             radiusVal.textContent = config.radius;
             densityVal.textContent = config.density;
             paintLeftEl.textContent = config.paintLeft;
