@@ -1,28 +1,34 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useEffect } from 'react';
 
-export default function SprayPage() {
+export default function SprayCanvasPage() {
   const canvasRef = useRef(null);
-  const [paintLeft, setPaintLeft] = useState(2_000_000);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [config, setConfig] = useState({
+  const paintLeftSpanRef = useRef(null);
+
+  // --- State refs ---
+  const configRef = useRef({
     sprayRadius: 30,
     dotsPerTick: 556,
     speedFactor: 7,
     lineScale: 1.0,
     paintMax: 2_000_000,
+    paintLeft: 2_000_000,
     currentColor: '#2222ff',
   });
-  const paintedPixels = useRef(new Set());
-  const lastSprayPos = useRef(null);
-  const lastSprayTime = useRef(null);
 
+  const drawingRef = useRef(false);
+  const lastSprayPosRef = useRef(null);
+  const lastSprayTimeRef = useRef(null);
+  const dripMapRef = useRef({});
+  const mousePosRef = useRef({ x: null, y: null });
+
+  // --- Utils ---
   function getRandomInt(a, b) {
     return Math.random() * (b - a) + a;
   }
-  function getCanvasCoords(clientX, clientY) {
-    const canvas = canvasRef.current;
+
+  function getCanvasCoords(clientX, clientY, canvas) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -32,166 +38,174 @@ export default function SprayPage() {
     };
   }
 
-  function sprayAt(x, y) {
-    const ctx = canvasRef.current.getContext('2d');
+  // --- Spray logic ---
+  function sprayAt(x, y, canvas, ctx) {
+    if (!canvas || !ctx) return;
+    if (configRef.current.paintLeft <= 0) return;
+
     const now = performance.now();
     let speed = 0;
-    if (lastSprayPos.current && lastSprayTime.current !== null) {
-      const dt = now - lastSprayTime.current;
-      const dist = Math.hypot(x - lastSprayPos.current.x, y - lastSprayPos.current.y);
+    if (lastSprayPosRef.current && lastSprayTimeRef.current !== null) {
+      const dt = now - lastSprayTimeRef.current;
+      const dist = Math.hypot(x - lastSprayPosRef.current.x, y - lastSprayPosRef.current.y);
       speed = dist / (dt || 1);
-      speed = Math.min(1, speed / config.speedFactor);
+      speed = Math.min(1, speed / configRef.current.speedFactor);
     }
 
-    const scale = config.lineScale;
+    const scale = configRef.current.lineScale;
     const minDot = 0.7 * scale;
     const maxDot = 1.1 * scale;
     const dotFromSpeed = maxDot - (maxDot - minDot) * speed;
 
-    const minRadius = config.sprayRadius * 0.7 * scale;
-    const maxRadius = config.sprayRadius * 3 * scale;
+    const minRadius = configRef.current.sprayRadius * 0.7 * scale;
+    const maxRadius = configRef.current.sprayRadius * 3 * scale;
     const radiusFromSpeed = minRadius + (maxRadius - minRadius) * speed;
 
-    let paintUsed = 0;
+    const minAlpha = 0.15;
+    const maxAlpha = 0.55;
+    const alphaFromSpeed = maxAlpha - (maxAlpha - minAlpha) * speed;
 
-    for (let i = 0; i < config.dotsPerTick; i++) {
-      if (paintLeft - paintUsed <= 0) break;
-
-      const angle = getRandomInt(0, Math.PI * 2);
-      const r = getRandomInt(0, radiusFromSpeed);
+    let dotsDrawn = 0;
+    for (let i = 0; i < configRef.current.dotsPerTick; i++) {
+      if (configRef.current.paintLeft <= 0) break;
+      const angle = Math.random() * 2 * Math.PI;
+      const r = Math.random() * radiusFromSpeed;
       const dx = Math.cos(angle) * r;
       const dy = Math.sin(angle) * r;
+      const size = getRandomInt(dotFromSpeed * 0.85, dotFromSpeed);
 
-      let px = Math.round(x + dx);
-      let py = Math.round(y + dy);
-      let key = px + "_" + py;
+      ctx.globalAlpha = alphaFromSpeed * (0.8 + Math.random() * 0.3);
+      ctx.fillStyle = configRef.current.currentColor;
+      ctx.beginPath();
+      ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
+      ctx.fill();
 
-      if (!paintedPixels.current.has(key)) {
-        paintedPixels.current.add(key);
-        paintUsed++;
-        ctx.globalAlpha = getRandomInt(0.15, 0.65);
-        ctx.fillStyle = config.currentColor;
+      // Подтёки
+      const cellX = Math.round(x + dx);
+      const cellY = Math.round(y + dy);
+      const cellKey = ${cellX}_${cellY};
+      dripMapRef.current[cellKey] = (dripMapRef.current[cellKey] || 0) + 1;
+      const drops = dripMapRef.current[cellKey];
+
+      const threshold = Math.max(10, 14 * scale);
+      if (drops > threshold && drops % 3 === 0) {
+        const dripLen =
+          Math.min(
+            250 * scale,
+            Math.sqrt(drops - threshold) * 4 * scale + getRandomInt(-1, 2)
+          );
+        ctx.save();
+        ctx.globalAlpha = 0.12 + Math.random() * 0.01;
+        ctx.strokeStyle = configRef.current.currentColor;
+        ctx.lineWidth = size * getRandomInt(0.7, 1.5);
         ctx.beginPath();
-        ctx.arc(px, py, dotFromSpeed, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(cellX + getRandomInt(-1, 1), cellY + size / 2);
+        ctx.lineTo(
+          cellX + getRandomInt(-1, 1),
+
+
+cellY + size / 2 + dripLen
+        );
+        ctx.stroke();
+        ctx.restore();
       }
+
+      dotsDrawn++;
+      configRef.current.paintLeft--;
     }
 
-    if (paintUsed > 0) {
-      setPaintLeft(prev => {
-        let left = prev - paintUsed;
-        if (left <= 0) setIsDrawing(false);
-        return left > 0 ? left : 0;
-      });
-    }
+    lastSprayPosRef.current = { x, y };
+    lastSprayTimeRef.current = now;
 
-    lastSprayPos.current = { x, y };
-    lastSprayTime.current = now;
+    // Обновляем счетчик краски
+    if (paintLeftSpanRef.current) {
+      paintLeftSpanRef.current.textContent = configRef.current.paintLeft;
+    }
   }
 
+  // --- Drawing loop ---
+  useEffect(() => {
+    let animationFrameId;
+
+    function tick() {
+      if (drawingRef.current && mousePosRef.current.x !== null && mousePosRef.current.y !== null) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        sprayAt(mousePosRef.current.x, mousePosRef.current.y, canvas, ctx);
+      }
+      animationFrameId = requestAnimationFrame(tick);
+    }
+
+    tick();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+    // eslint-disable-next-line
+  }, []);
+
+  // --- Mouse/touch event handlers ---
   function handlePointerDown(e) {
-    if (paintLeft <= 0) return;
-    setIsDrawing(true);
-    let pointerX, pointerY;
+    drawingRef.current = true;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let coords;
     if (e.touches && e.touches.length > 0) {
-      // Touch event
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY));
+      coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY, canvas);
     } else {
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.clientX, e.clientY));
+      coords = getCanvasCoords(e.clientX, e.clientY, canvas);
     }
-    sprayAt(pointerX, pointerY);
+    mousePosRef.current = coords;
+
+    lastSprayPosRef.current = coords;
+    lastSprayTimeRef.current = performance.now();
+
+    // Для мобильных предотвратить скролл
+    if (e.preventDefault) e.preventDefault();
   }
+
   function handlePointerMove(e) {
-    if (!isDrawing || paintLeft <= 0) return;
-    let pointerX, pointerY;
+    if (!drawingRef.current) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let coords;
     if (e.touches && e.touches.length > 0) {
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY));
+      coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY, canvas);
     } else {
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.clientX, e.clientY));
+      coords = getCanvasCoords(e.clientX, e.clientY, canvas);
     }
-    sprayAt(pointerX, pointerY);
+    mousePosRef.current = coords;
+
+    // Для мобильных предотвратить скролл
+    if (e.preventDefault) e.preventDefault();
   }
+
   function handlePointerUp() {
-    setIsDrawing(false);
+    drawingRef.current = false;
+    mousePosRef.current = { x: null, y: null };
+    lastSprayPosRef.current = null;
+    lastSprayTimeRef.current = null;
   }
 
-  function resetCanvas() {
-    paintedPixels.current.clear();
-    setPaintLeft(config.paintMax);
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);lastSprayPos.current = null;
-    lastSprayTime.current = null;
-  }
+  // --- Setup initial counter value on mount ---
+  useEffect(() => {
+    if (paintLeftSpanRef.current)
+      paintLeftSpanRef.current.textContent = configRef.current.paintLeft;
+  }, []);
 
-  function handleConfigChange(e) {
-    const { name, value } = e.target;
-    setConfig(cfg => ({
-      ...cfg,
-      [name]: name === 'currentColor' ? value : +value,
-    }));
-  }
-
-  // --- Touch support ---
-  // React onTouch* handlers don't fire on desktop browsers but safe for mobile
-  // Prevent scrolling while drawing
-  function preventScroll(e) {
-    if (isDrawing) e.preventDefault();
-  }
-
+  // --- Render ---
   return (
-    <div style={{padding:'20px'}}>
-      <h2>Спрей-краска</h2>
-      <div style={{marginBottom:10}}>
-        <label>
-          Радиус:
-          <input type="range" min={5} max={120} value={config.sprayRadius}
-            name="sprayRadius" onChange={handleConfigChange} />
-          {config.sprayRadius}
-        </label>
-        {' '}
-        <label>
-          Плотность:
-          <input type="range" min={50} max={2000} value={config.dotsPerTick}
-            name="dotsPerTick" onChange={handleConfigChange} />
-          {config.dotsPerTick}
-        </label>
-        {' '}
-        <label>
-          Масштаб:
-          <input type="range" min={0.5} max={2.5} step={0.01} value={config.lineScale}
-            name="lineScale" onChange={handleConfigChange} />
-          {config.lineScale}
-        </label>
-        {' '}
-        <label>
-          Скорость:
-          <input type="range" min={1} max={20} step={0.1} value={config.speedFactor}
-            name="speedFactor" onChange={handleConfigChange} />
-          {config.speedFactor}
-        </label>
-        {' '}
-        <label>
-          Цвет:
-          <input type="color" value={config.currentColor}
-            name="currentColor" onChange={handleConfigChange} />
-        </label>
-        {' '}
-        <button onClick={resetCanvas}>Сбросить</button>
-      </div>
-      <div style={{marginBottom:10}}>
-        Осталось краски: <b>{paintLeft}</b>
-        {paintLeft <= 0 && <span style={{color:'red'}}> Краска закончилась!</span>}
-      </div>
+    <div>
       <canvas
         ref={canvasRef}
-        width={900}
+        width={800}
         height={600}
-        style={{
-          border:'1px solid #888',
-          background:'#fff',
-          cursor: paintLeft > 0 ? 'crosshair' : 'not-allowed',
-          touchAction:'none'
-        }}
+        style={{ border: '1px solid #ccc', touchAction: 'none', display: 'block' }}
         onMouseDown={handlePointerDown}
         onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp}
@@ -200,12 +214,9 @@ export default function SprayPage() {
         onTouchMove={handlePointerMove}
         onTouchEnd={handlePointerUp}
         onTouchCancel={handlePointerUp}
-        onContextMenu={e => e.preventDefault()}
-        onPointerDown={preventScroll}
       />
-      <div style={{marginTop:'14px', color:'#888'}}>
-        Используйте мышь или палец для рисования.<br/>
-        После окончания краски нажмите "Сбросить".
+      <div>
+        Осталось краски: <span ref={paintLeftSpanRef}></span>
       </div>
     </div>
   );
