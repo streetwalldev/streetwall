@@ -5,7 +5,6 @@ import { useRef, useEffect } from 'react';
 
 export default function SprayCanvasPage() {
   const canvasRef = useRef(null);
-  const bgImageInputRef = useRef(null);
   const colorPickerRef = useRef(null);
   const scaleRangeRef = useRef(null);
   const radiusRangeRef = useRef(null);
@@ -13,14 +12,15 @@ export default function SprayCanvasPage() {
   const speedFactorRef = useRef(null);
   const resetBtnRef = useRef(null);
   const paintLeftSpanRef = useRef(null);
+  const bgImageInputRef = useRef(null);
 
   const scaleValRef = useRef(null);
   const radiusValRef = useRef(null);
   const densityValRef = useRef(null);
   const speedFactorValRef = useRef(null);
 
-  // --- Настройки (как в оригинальном прототипе) ---
-  const config = {
+  // --- State refs ---
+  const configRef = useRef({
     sprayRadius: 30,
     dotsPerTick: 556,
     speedFactor: 7,
@@ -28,7 +28,7 @@ export default function SprayCanvasPage() {
     paintMax: 2_000_000,
     paintLeft: 2_000_000,
     currentColor: '#2222ff',
-  };
+  });
 
   const drawingRef = useRef(false);
   const lastSprayPosRef = useRef(null);
@@ -37,14 +37,13 @@ export default function SprayCanvasPage() {
   const dripMapRef = useRef({});
   const bgImageRef = useRef(null);
 
-  // --- Вспомогательные функции ---
+  // --- Utils ---
   function getRandomInt(a, b) {
     return Math.random() * (b - a) + a;
   }
 
-  function getCanvasCoords(clientX, clientY) {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+  // 🔑 Ключевое исправление: точная калибровка под devicePixelRatio и размер холста
+  function getCanvasCoords(clientX, clientY, canvas) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -54,60 +53,54 @@ export default function SprayCanvasPage() {
     };
   }
 
-  function redraw() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+  function redraw(canvas, ctx) {
+    if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (bgImageRef.current) {
       ctx.drawImage(bgImageRef.current, 0, 0, canvas.width, canvas.height);
     }
   }
 
-  function resetCanvas() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+  function resetCanvas(canvas, ctx) {
+    if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    config.paintLeft = config.paintMax;
+    configRef.current.paintLeft = configRef.current.paintMax;
     paintedPixelsRef.current.clear();
     dripMapRef.current = {};
     lastSprayPosRef.current = null;
     lastSprayTimeRef.current = null;
     if (paintLeftSpanRef.current) {
-      paintLeftSpanRef.current.textContent = config.paintLeft;
+      paintLeftSpanRef.current.textContent = configRef.current.paintLeft;
     }
-    redraw();
+    redraw(canvas, ctx);
   }
 
-  function sprayAt(x, y) {
+  function sprayAt(x, y, canvas, ctx) {
+    if (!canvas || !ctx) return;
+
     const now = performance.now();
     let speed = 0;
     if (lastSprayPosRef.current && lastSprayTimeRef.current !== null) {
       const dt = now - lastSprayTimeRef.current;
       const dist = Math.hypot(x - lastSprayPosRef.current.x, y - lastSprayPosRef.current.y);
       speed = dist / (dt || 1);
-      speed = Math.min(1, speed / config.speedFactor);
+      speed = Math.min(1, speed / configRef.current.speedFactor);
     }
 
-    const scale = config.lineScale;
+    const scale = configRef.current.lineScale;
     const minDot = 0.7 * scale;
     const maxDot = 1.1 * scale;
     const dotFromSpeed = maxDot - (maxDot - minDot) * speed;
 
-    const minRadius = config.sprayRadius * 0.7 * scale;
-    const maxRadius = config.sprayRadius * 3 * scale;
+    const minRadius = configRef.current.sprayRadius * 0.7 * scale;
+    const maxRadius = configRef.current.sprayRadius * 3 * scale;
     const radiusFromSpeed = minRadius + (maxRadius - minRadius) * speed;
 
     const minAlpha = 0.15;
     const maxAlpha = 0.55;
     const alphaFromSpeed = maxAlpha - (maxAlpha - minAlpha) * speed;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    for (let i = 0; i < config.dotsPerTick; i++) {
+    for (let i = 0; i < configRef.current.dotsPerTick; i++) {
       const angle = Math.random() * 2 * Math.PI;
       const r = Math.random() * radiusFromSpeed;
       const dx = Math.cos(angle) * r;
@@ -115,7 +108,7 @@ export default function SprayCanvasPage() {
       const size = getRandomInt(dotFromSpeed * 0.85, dotFromSpeed);
 
       ctx.globalAlpha = alphaFromSpeed * (0.8 + Math.random() * 0.3);
-      ctx.fillStyle = config.currentColor;
+      ctx.fillStyle = configRef.current.currentColor;
       ctx.beginPath();
       ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
       ctx.fill();
@@ -132,7 +125,7 @@ export default function SprayCanvasPage() {
         const dripLen = Math.min(250 * scale, Math.sqrt(drops - threshold) * 4 * scale + getRandomInt(-1, 2));
         ctx.save();
         ctx.globalAlpha = 0.12 + Math.random() * 0.01;
-        ctx.strokeStyle = config.currentColor;
+        ctx.strokeStyle = configRef.current.currentColor;
         ctx.lineWidth = size * getRandomInt(0.7, 1.5);
         ctx.beginPath();
         ctx.moveTo(cellX + getRandomInt(-1, 1), cellY + size / 2);
@@ -147,171 +140,128 @@ export default function SprayCanvasPage() {
       const key = `${px}_${py}`;
       if (!paintedPixelsRef.current.has(key)) {
         paintedPixelsRef.current.add(key);
-        config.paintLeft--;
-        if (config.paintLeft <= 0) {
+        configRef.current.paintLeft--;
+        if (configRef.current.paintLeft <= 0) {
           drawingRef.current = false;
-          if (typeof window !== 'undefined') {
-            alert('🎨 Краска закончилась!');
-          }
+          alert('🎨 Краска закончилась!');
         }
       }
     }
 
     ctx.globalAlpha = 1;
     if (paintLeftSpanRef.current) {
-      paintLeftSpanRef.current.textContent = Math.max(0, config.paintLeft);
+      paintLeftSpanRef.current.textContent = Math.max(0, configRef.current.paintLeft);
     }
     lastSprayPosRef.current = { x, y };
     lastSprayTimeRef.current = now;
   }
 
-  // --- Обработка событий ---
+  // --- Setup на клиенте ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    function loadBackground(file) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set initial size (1024x1024)
+    canvas.width = 1024;
+    canvas.height = 1024;
+
+    // Load background handler
+    const handleBgImage = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
       const reader = new FileReader();
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
           bgImageRef.current = img;
+          // Resize canvas to image
           canvas.width = img.width;
           canvas.height = img.height;
-          redraw();
+          redraw(canvas, ctx);
         };
         img.src = reader.result;
       };
       reader.readAsDataURL(file);
-    }
+    };
 
-    function handleMouseDown(e) {
-      if (config.paintLeft <= 0) return;
-      const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+    // Mouse handlers
+    const handleMouseDown = (e) => {
+      if (configRef.current.paintLeft <= 0) return;
+      const { x, y } = getCanvasCoords(e.clientX, e.clientY, canvas);
       drawingRef.current = true;
-      sprayAt(x, y);
-    }
+      sprayAt(x, y, canvas, ctx);
+    };
 
-    function handleMouseMove(e) {
-      if (!drawingRef.current || config.paintLeft <= 0) return;
-      const { x, y } = getCanvasCoords(e.clientX, e.clientY);
-      sprayAt(x, y);
-    }
+    const handleMouseMove = (e) => {
+      if (!drawingRef.current || configRef.current.paintLeft <= 0) return;
+      const { x, y } = getCanvasCoords(e.clientX, e.clientY, canvas);
+      sprayAt(x, y, canvas, ctx);
+    };
 
-    function handleMouseUp() {
+    const handleMouseUp = () => {
       drawingRef.current = false;
       lastSprayPosRef.current = null;
       lastSprayTimeRef.current = null;
-    }
+    };
 
-    function handleTouchStart(e) {
-      if (e.touches.length === 1 && config.paintLeft > 0) {
-        const t = e.touches[0];
-        const { x, y } = getCanvasCoords(t.clientX, t.clientY);
-        drawingRef.current = true;
-        sprayAt(x, y);
-        e.preventDefault();
-      }
-    }
-
-    function handleTouchMove(e) {
-      if (e.touches.length === 1 && drawingRef.current && config.paintLeft > 0) {
-        const t = e.touches[0];
-        const { x, y } = getCanvasCoords(t.clientX, t.clientY);
-        sprayAt(x, y);
-        e.preventDefault();
-      }
-    }
-
-    // Подписки
+    // Attach listeners
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseUp);
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleMouseUp);
-    canvas.addEventListener('touchcancel', handleMouseUp);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseleave', handleMouseUp);
 
-    // Drag & Drop
-    const preventDefaults = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((evt) => {
-      document.addEventListener(evt, preventDefaults, false);
-    });
-
-    document.addEventListener('drop', (e) => {
-      preventDefaults(e);
-      const file = e.dataTransfer.files?.[0];
-      if (file && file.type.startsWith('image/')) {
-        loadBackground(file);
-      }
-    });
-
-    // Input
+    // Background input
     const bgInput = bgImageInputRef.current;
     if (bgInput) {
-      bgInput.addEventListener('change', (e) => {
-        if (e.target.files?.[0]) {
-          loadBackground(e.target.files[0]);
-        }
-      });
+      bgInput.addEventListener('change', handleBgImage);
     }
 
-    // UI updates
+    // UI update
     const updateUI = () => {
-      if (!scaleRangeRef.current) return;
-      config.lineScale = parseFloat(scaleRangeRef.current.value);
-      config.sprayRadius = parseInt(radiusRangeRef.current.value, 10);
-      config.dotsPerTick = parseInt(densityRangeRef.current.value, 10);
-      config.speedFactor = parseFloat(speedFactorRef.current.value);
-      config.currentColor = colorPickerRef.current?.value || config.currentColor;
+      if (scaleRangeRef.current) {
+        configRef.current.lineScale = parseFloat(scaleRangeRef.current.value);
+        configRef.current.sprayRadius = parseInt(radiusRangeRef.current.value, 10);
+        configRef.current.dotsPerTick = parseInt(densityRangeRef.current.value, 10);
+        configRef.current.speedFactor = parseFloat(speedFactorRef.current.value);
+        configRef.current.currentColor = colorPickerRef.current?.value || '#2222ff';
 
-      if (scaleValRef.current) scaleValRef.current.textContent = config.lineScale.toFixed(2);
-      if (radiusValRef.current) radiusValRef.current.textContent = config.sprayRadius;
-      if (densityValRef.current) densityValRef.current.textContent = config.dotsPerTick;
-      if (speedFactorValRef.current) speedFactorValRef.current.textContent = config.speedFactor.toFixed(1);
+        if (scaleValRef.current) scaleValRef.current.textContent = configRef.current.lineScale.toFixed(2);
+        if (radiusValRef.current) radiusValRef.current.textContent = configRef.current.sprayRadius;
+        if (densityValRef.current) densityValRef.current.textContent = configRef.current.dotsPerTick;
+        if (speedFactorValRef.current) speedFactorValRef.current.textContent = configRef.current.speedFactor.toFixed(1);
+      }
     };
-
-    const inputs = [
-      scaleRangeRef.current,
-      radiusRangeRef.current,
-      densityRangeRef.current,
-      speedFactorRef.current,
-      colorPickerRef.current,
-    ].filter(Boolean);
-
-    inputs.forEach((el) => el.addEventListener('input', updateUI));
-
-    const resetBtn = resetBtnRef.current;
-    if (resetBtn) resetBtn.addEventListener('click', resetCanvas);
 
     // Init
     updateUI();
-    resetCanvas();
+    resetCanvas(canvas, ctx);
 
     // Cleanup
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseUp);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleMouseUp);
-      canvas.removeEventListener('touchcancel', handleMouseUp);
-
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((evt) => {
-        document.removeEventListener(evt, preventDefaults, false);
-      });
-      document.removeEventListener('drop', (e) => {});
-
-      inputs.forEach((el) => el.removeEventListener('input', updateUI));
-      if (resetBtn) resetBtn.removeEventListener('click', resetCanvas);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseleave', handleMouseUp);
+      if (bgInput) bgInput.removeEventListener('change', handleBgImage);
     };
+  }, []);
+
+  // Reset handler (outside useEffect — bind via ref)
+  useEffect(() => {
+    const resetBtn = resetBtnRef.current;
+    if (resetBtn) {
+      const handler = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx) resetCanvas(canvas, ctx);
+      };
+      resetBtn.addEventListener('click', handler);
+      return () => resetBtn.removeEventListener('click', handler);
+    }
   }, []);
 
   return (
@@ -321,8 +271,6 @@ export default function SprayCanvasPage() {
         <div style={{ position: 'relative', border: '1px solid #555', borderRadius: '4px', overflow: 'hidden' }}>
           <canvas
             ref={canvasRef}
-            width="1024"
-            height="1024"
             style={{
               background: '#111',
               cursor: 'crosshair',
