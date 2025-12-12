@@ -1,4 +1,115 @@
-);
+'use client';
+
+import { useRef, useEffect, useState } from 'react';
+
+const CANVAS_SIZE = 1024;
+
+export default function SprayPage() {
+  // Ссылки на canvas и input'ы
+  const canvasRef = useRef(null);
+  const bgImageInputRef = useRef(null);
+
+  // Состояния контролов
+  const [currentColor, setCurrentColor] = useState('#2222ff');
+  const [lineScale, setLineScale] = useState(1.0);
+  const [sprayRadius, setSprayRadius] = useState(30);
+  const [dotsPerTick, setDotsPerTick] = useState(556);
+  const [speedFactor, setSpeedFactor] = useState(7);
+  const [paintLeft, setPaintLeft] = useState(2_000_000);
+
+  // Внутренние переменные для рисования
+  const drawingRef = useRef(false);
+  const lastSprayPosRef = useRef(null);
+  const lastSprayTimeRef = useRef(null);
+  const dripMapRef = useRef({});
+  const bgImageRef = useRef(null);
+
+  // --- Вспомогательные функции ---
+  function getRandomInt(a, b) {
+    return Math.random() * (b - a) + a;
+  }
+
+  function getCanvasCoords(clientX, clientY) {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  }
+
+  // --- Рисование спрея ---
+  function sprayAt(x, y) {
+    if (!canvasRef.current) return;
+    if (paintLeft <= 0) return;
+
+    const ctx = canvasRef.current.getContext('2d');
+
+    const now = performance.now();
+    let speed = 0;
+    if (lastSprayPosRef.current && lastSprayTimeRef.current !== null) {
+      const dt = now - lastSprayTimeRef.current;
+      const dist = Math.hypot(x - lastSprayPosRef.current.x, y - lastSprayPosRef.current.y);
+      speed = dist / (dt || 1);
+      speed = Math.min(1, speed / speedFactor);
+    }
+
+    const scale = lineScale;
+    const minDot = 0.7 * scale;
+    const maxDot = 1.1 * scale;
+    const dotFromSpeed = maxDot - (maxDot - minDot) * speed;
+
+    const minRadius = sprayRadius * 0.7 * scale;
+    const maxRadius = sprayRadius * 3 * scale;
+    const radiusFromSpeed = minRadius + (maxRadius - minRadius) * speed;
+
+    const minAlpha = 0.15;
+    const maxAlpha = 0.55;
+    const alphaFromSpeed = maxAlpha - (maxAlpha - minAlpha) * speed;
+
+    let dotsDrawn = 0;
+    let paintLeftNow = paintLeft;
+
+    for (let i = 0; i < dotsPerTick; i++) {
+      if (paintLeftNow <= 0) break;
+      const angle = Math.random() * 2 * Math.PI;
+      const r = Math.random() * radiusFromSpeed;
+      const dx = Math.cos(angle) * r;
+      const dy = Math.sin(angle) * r;
+      const size = getRandomInt(dotFromSpeed * 0.85, dotFromSpeed);
+
+      ctx.globalAlpha = alphaFromSpeed * (0.8 + Math.random() * 0.3);
+      ctx.fillStyle = currentColor;
+      ctx.beginPath();
+      ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Подтёки
+      const cellX = Math.round(x + dx);
+      const cellY = Math.round(y + dy);
+      const cellKey = ${cellX}_${cellY};
+      dripMapRef.current[cellKey] = (dripMapRef.current[cellKey] || 0) + 1;
+      const drops = dripMapRef.current[cellKey];
+
+      const threshold = Math.max(10, 14 * scale);
+      if (drops > threshold && drops % 3 === 0) {
+        const dripLen =
+          Math.min(
+            250 * scale,
+            Math.sqrt(drops - threshold) * 4 * scale + getRandomInt(-1, 2)
+          );
+        ctx.save();
+        ctx.globalAlpha = 0.12 + Math.random() * 0.01;
+        ctx.strokeStyle = currentColor;
+                      ctx.lineWidth = size * getRandomInt(0.7, 1.5);
+        ctx.beginPath();
+        ctx.moveTo(cellX + getRandomInt(-1, 1), cellY + size / 2);
+        ctx.lineTo(
+          cellX + getRandomInt(-1, 1),
+          cellY + size / 2 + dripLen
+        );
         ctx.stroke();
         ctx.restore();
       }
@@ -153,7 +264,7 @@
     <div style={styles.body}>
       <div style={styles.canvasContainer}>
         <h2>Spray Canvas</h2>
-        <canvas
+                <canvas
           ref={canvasRef}
           width={CANVAS_SIZE}
           height={CANVAS_SIZE}
@@ -170,7 +281,7 @@
       </div>
 
       <div style={styles.controls}>
-        <h3>Controls</h3>
+        <h3>🔧 Controls</h3>
 
         <div style={styles.controlGroup}>
           <label style={styles.label}>
