@@ -1,212 +1,149 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
-export default function SprayPage() {
+const COLORS = [
+  '#000000', '#ff0000', '#00ff00', '#0000ff',
+  '#ffff00', '#ff00ff', '#00ffff', '#ffffff',
+];
+
+export default function Home() {
   const canvasRef = useRef(null);
-  const [paintLeft, setPaintLeft] = useState(2_000_000);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [config, setConfig] = useState({
-    sprayRadius: 30,
-    dotsPerTick: 556,
-    speedFactor: 7,
-    lineScale: 1.0,
-    paintMax: 2_000_000,
-    currentColor: '#2222ff',
-  });
-  const paintedPixels = useRef(new Set());
-  const lastSprayPos = useRef(null);
-  const lastSprayTime = useRef(null);
+  const [color, setColor] = useState('#000000');
+  const [size, setSize] = useState(15);
+  const [drawing, setDrawing] = useState(false);
 
-  function getRandomInt(a, b) {
-    return Math.random() * (b - a) + a;
-  }
-  function getCanvasCoords(clientX, clientY) {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+  // Spray logic
+  const sprayInterval = useRef(null);
+
+  function getRandomOffset(radius) {
+    // Uniform distribution within a circle
+    const angle = Math.random() * 2 * Math.PI;
+    const r = radius * Math.sqrt(Math.random());
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
+      x: r * Math.cos(angle),
+      y: r * Math.sin(angle),
     };
   }
 
-  function sprayAt(x, y) {
+  function spray(x, y) {
     const ctx = canvasRef.current.getContext('2d');
-    const now = performance.now();
-    let speed = 0;
-    if (lastSprayPos.current && lastSprayTime.current !== null) {
-      const dt = now - lastSprayTime.current;
-      const dist = Math.hypot(x - lastSprayPos.current.x, y - lastSprayPos.current.y);
-      speed = dist / (dt || 1);
-      speed = Math.min(1, speed / config.speedFactor);
+    const density = Math.floor(size * 2); // Number of dots per tick
+
+    for (let i = 0; i < density; i++) {
+      const offset = getRandomOffset(size);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + offset.x, y + offset.y, 1, 0, 2 * Math.PI);
+      ctx.fill();
     }
-
-    const scale = config.lineScale;
-    const minDot = 0.7 * scale;
-    const maxDot = 1.1 * scale;
-    const dotFromSpeed = maxDot - (maxDot - minDot) * speed;
-
-    const minRadius = config.sprayRadius * 0.7 * scale;
-    const maxRadius = config.sprayRadius * 3 * scale;
-    const radiusFromSpeed = minRadius + (maxRadius - minRadius) * speed;
-
-    let paintUsed = 0;
-
-    for (let i = 0; i < config.dotsPerTick; i++) {
-      if (paintLeft - paintUsed <= 0) break;
-
-      const angle = getRandomInt(0, Math.PI * 2);
-      const r = getRandomInt(0, radiusFromSpeed);
-      const dx = Math.cos(angle) * r;
-      const dy = Math.sin(angle) * r;
-
-      let px = Math.round(x + dx);
-      let py = Math.round(y + dy);
-      let key = px + "_" + py;
-
-      if (!paintedPixels.current.has(key)) {
-        paintedPixels.current.add(key);
-        paintUsed++;
-        ctx.globalAlpha = getRandomInt(0.15, 0.65);
-        ctx.fillStyle = config.currentColor;
-        ctx.beginPath();
-        ctx.arc(px, py, dotFromSpeed, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    if (paintUsed > 0) {
-      setPaintLeft(prev => {
-        let left = prev - paintUsed;
-        if (left <= 0) setIsDrawing(false);
-        return left > 0 ? left : 0;
-      });
-    }
-
-    lastSprayPos.current = { x, y };
-    lastSprayTime.current = now;
   }
 
   function handlePointerDown(e) {
-    if (paintLeft <= 0) return;
-    setIsDrawing(true);
-    let pointerX, pointerY;
-    if (e.touches && e.touches.length > 0) {
-      // Touch event
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY));
-    } else {
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.clientX, e.clientY));
-    }
-    sprayAt(pointerX, pointerY);
+    setDrawing(true);
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    spray(x, y);
+
+    sprayInterval.current = setInterval(() => {
+      const evt = e.touches ? e.touches[0] : e;
+      const xx = evt.clientX - rect.left;
+      const yy = evt.clientY - rect.top;
+      spray(xx, yy);
+    }, 50);
   }
+
   function handlePointerMove(e) {
-    if (!isDrawing || paintLeft <= 0) return;
-    let pointerX, pointerY;
-    if (e.touches && e.touches.length > 0) {
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY));
-    } else {
-      ({ x: pointerX, y: pointerY } = getCanvasCoords(e.clientX, e.clientY));
-    }
-    sprayAt(pointerX, pointerY);
+    if (!drawing) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    spray(x, y);
   }
+
   function handlePointerUp() {
-    setIsDrawing(false);
+    setDrawing(false);
+    clearInterval(sprayInterval.current);
   }
 
-  function resetCanvas() {
-    paintedPixels.current.clear();
-    setPaintLeft(config.paintMax);
+  function handleClear() {
     const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);lastSprayPos.current = null;
-    lastSprayTime.current = null;
-  }
-
-  function handleConfigChange(e) {
-    const { name, value } = e.target;
-    setConfig(cfg => ({
-      ...cfg,
-      [name]: name === 'currentColor' ? value : +value,
-    }));
-  }
-
-  // --- Touch support ---
-  // React onTouch* handlers don't fire on desktop browsers but safe for mobile
-  // Prevent scrolling while drawing
-  function preventScroll(e) {
-    if (isDrawing) e.preventDefault();
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }
 
   return (
-    <div style={{padding:'20px'}}>
-      <h2>Спрей-краска</h2>
-      <div style={{marginBottom:10}}>
-        <label>
-          Радиус:
-          <input type="range" min={5} max={120} value={config.sprayRadius}
-            name="sprayRadius" onChange={handleConfigChange} />
-          {config.sprayRadius}
-        </label>
-        {' '}
-        <label>
-          Плотность:
-          <input type="range" min={50} max={2000} value={config.dotsPerTick}
-            name="dotsPerTick" onChange={handleConfigChange} />
-          {config.dotsPerTick}
-        </label>
-        {' '}
-        <label>
-          Масштаб:
-          <input type="range" min={0.5} max={2.5} step={0.01} value={config.lineScale}
-            name="lineScale" onChange={handleConfigChange} />
-          {config.lineScale}
-        </label>
-        {' '}
-        <label>
-          Скорость:
-          <input type="range" min={1} max={20} step={0.1} value={config.speedFactor}
-            name="speedFactor" onChange={handleConfigChange} />
-          {config.speedFactor}
-        </label>
-        {' '}
+    <main style={{
+      minHeight: '100vh',
+      background: '#f7f7f7',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: 40,
+    }}>
+      <h1 style={{ marginBottom: 20 }}>Spray Paint App</h1>
+      <div style={{
+        display: 'flex',
+        gap: 16,
+        alignItems: 'center',
+        marginBottom: 16,
+        flexWrap: 'wrap'
+      }}>
         <label>
           Цвет:
-          <input type="color" value={config.currentColor}
-            name="currentColor" onChange={handleConfigChange} />
+          <select
+            value={color}
+            onChange={e => setColor(e.target.value)}
+            style={{ marginLeft: 8 }}
+          >
+            {COLORS.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </label>
-        {' '}
-        <button onClick={resetCanvas}>Сбросить</button>
-      </div>
-      <div style={{marginBottom:10}}>
-        Осталось краски: <b>{paintLeft}</b>
-        {paintLeft <= 0 && <span style={{color:'red'}}> Краска закончилась!</span>}
+        <label>
+          Размер:
+          <input
+            type="range"
+            min={5}
+            max={60}
+            value={size}
+            onChange={e => setSize(Number(e.target.value))}
+            style={{ marginLeft: 8 }}
+          />
+          <span style={{ marginLeft: 8 }}>{size}px</span>
+        </label>
+        <button onClick={handleClear} style={{
+          padding: '6px 18px',
+          borderRadius: 8,
+          border: '1px solid #bbb',
+          background: '#fff',
+          cursor: 'pointer'
+        }}>
+          Очистить
+        </button>
       </div>
       <canvas
         ref={canvasRef}
-        width={900}
-        height={600}
+        width={600}
+        height={400}
         style={{
-          border:'1px solid #888',
-          background:'#fff',
-          cursor: paintLeft > 0 ? 'crosshair' : 'not-allowed',
-          touchAction:'none'
+          border: '2px solid #333',
+          borderRadius: 12,
+          background: '#fff',
+          touchAction: 'none'
         }}
-        onMouseDown={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
+
+
+onMouseDown={handlePointerDown}
         onTouchStart={handlePointerDown}
+        onMouseMove={handlePointerMove}
         onTouchMove={handlePointerMove}
+        onMouseUp={handlePointerUp}
         onTouchEnd={handlePointerUp}
-        onTouchCancel={handlePointerUp}
-        onContextMenu={e => e.preventDefault()}
-        onPointerDown={preventScroll}
+        onMouseLeave={handlePointerUp}
       />
-      <div style={{marginTop:'14px', color:'#888'}}>
-        Используйте мышь или палец для рисования.<br/>
-        После окончания краски нажмите "Сбросить".
-      </div>
-    </div>
+      <p style={{marginTop:20, color:'#666'}}>Нажмите и удерживайте мышь или палец для рисования спреем.</p>
+    </main>
   );
 }
