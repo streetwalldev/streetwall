@@ -1,215 +1,225 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
-export default function SprayPage() {
+const CANVAS_W = 800;
+const CANVAS_H = 600;
+const PAINT_MAX = 8000;
+
+export default function Page() {
   const canvasRef = useRef(null);
-  const radiusRef = useRef(null);
-  const densityRef = useRef(null);
-  const paintLeftRef = useRef(null);
-  const colorRef = useRef(null);
+  const [color, setColor] = useState('#000000');
+  const [radius, setRadius] = useState(20);
+  const [density, setDensity] = useState(30);
+  const [paintLeft, setPaintLeft] = useState(PAINT_MAX);
+  const [bgImg, setBgImg] = useState(null);
+  const [imgUrl, setImgUrl] = useState(null);
+  const [isDrawing, setIsDrawing] = useState(false);
 
-  useEffect(() => {
-    // Настройки спрея
-    const config = {
-      radius: 15,
-      density: 20,
-      color: '#000000',
-      paintLeft: 1000,
+  // Set of "painted" pixels to count unique ones
+  const paintedPixelsRef = useRef(new Set());
+
+  // For touch/pointer event compatibility
+  function getCanvasCoords(e) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches?.[0]) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
+  }
 
+  // Redraw bg image (and nothing else)
+  function redraw() {
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, CANVAS_W, CANVAS_H);
+    }
+  }
+
+  // Paint dots in a spray pattern
+  function sprayAt(x, y) {
+    if (paintLeft <= 0) return;
+    const ctx = canvasRef.current.getContext('2d');
+    let paintUsed = 0;
+    for (let i = 0; i < density; i++) {
+      if (paintLeft - paintUsed <= 0) break;
+
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * radius;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      // Dot size random from 1.2 to 3.5
+      const size = 1.2 + Math.random() * (3.5 - 1.2);
+
+      ctx.globalAlpha = Math.random() * (0.6 - 0.12) + 0.12;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + dx, y + dy, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Unique pixel logic
+      const px = Math.round(x + dx);
+      const py = Math.round(y + dy);
+      const key = px + ',' + py;
+      if (!paintedPixelsRef.current.has(key)) {
+        paintedPixelsRef.current.add(key);
+        paintUsed++;
+      }
+    }
+    if (paintUsed > 0) setPaintLeft(p => Math.max(0, p - paintUsed));
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Event Handlers ---
+
+  function handlePointerDown(e) {
+    e.preventDefault();
+    setIsDrawing(true);
+    const { x, y } = getCanvasCoords(e);
+    sprayAt(x, y);
+  }
+  function handlePointerMove(e) {
+    if (!isDrawing) return;
+    e.preventDefault?.();
+    const { x, y } = getCanvasCoords(e);
+    sprayAt(x, y);
+  }
+  function handlePointerUp() {
+    setIsDrawing(false);
+  }
+
+  // Touch events need passive: false to allow preventDefault
+  React.useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    if (!canvas) return;
 
-    let isDrawing = false;
-    let sprayInterval;
+    // Touch events for mobile
+    function tstart(e) { handlePointerDown(e); }
+    function tmove(e) { handlePointerMove(e); }
+    function tend() { handlePointerUp(); }
+    canvas.addEventListener('touchstart', tstart, { passive: false });
+    canvas.addEventListener('touchmove', tmove, { passive: false });
+    canvas.addEventListener('touchend', tend);
 
-    // UI элементы
-    const radiusVal = radiusRef.current;
-    const densityVal = densityRef.current;
-    const paintLeftEl = paintLeftRef.current;
-    const colorInput = colorRef.current;
+    // Redraw background when bgImg changes
+    redraw();
 
-    // Инициализация UI
-    radiusVal.textContent = config.radius;
-    densityVal.textContent = config.density;
-    paintLeftEl.textContent = config.paintLeft;
-
-    // Функция распыления
-    function spray(x, y) {
-      if (config.paintLeft <= 0) return;
-      for (let i = 0; i < config.density; i++) {
-        const angle = Math.random() * 2 * Math.PI;
-        const r = config.radius * Math.sqrt(Math.random());
-        const offsetX = r * Math.cos(angle);
-        const offsetY = r * Math.sin(angle);
-
-        ctx.fillStyle = config.color;
-        ctx.beginPath();
-        ctx.arc(x + offsetX, y + offsetY, 1, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      config.paintLeft--;
-      paintLeftEl.textContent = config.paintLeft;
-    }
-
-    // Координаты мыши/касания относительно canvas
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - rect.left,
-          y: e.touches[0].clientY - rect.top,
-        };
-      }
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-    }
-
-    function handlePointerDown(e) {
-      isDrawing = true;
-      const { x, y } = getPos(e);
-      spray(x, y);
-      sprayInterval = setInterval(() => {
-        if (!isDrawing) return;
-        const pos = getPos(e);
-        spray(pos.x, pos.y);
-      }, 50);
-    }
-
-    function handlePointerMove(e) {
-      if (!isDrawing) return;
-      const { x, y } = getPos(e);
-      spray(x, y);
-    }
-
-    function handlePointerUp() {
-      isDrawing = false;
-      clearInterval(sprayInterval);
-    }
-
-    function handleClear() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      config.paintLeft = 1000;
-      paintLeftEl.textContent = config.paintLeft;
-    }
-
-    function handleRadiusChange(e) {
-      config.radius = Number(e.target.value);
-      radiusVal.textContent = config.radius;
-    }
-
-    function handleDensityChange(e) {
-      config.density = Number(e.target.value);
-      densityVal.textContent = config.density;
-    }
-
-    function handleColorChange(e) {
-      config.color = e.target.value;
-    }
-
-    // Навешиваем события
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-
-    colorInput.addEventListener('input', handleColorChange);
-
-    // Чистим за собой при размонтировании
     return () => {
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-
-      colorInput.removeEventListener('input', handleColorChange);
+      canvas.removeEventListener('touchstart', tstart);
+      canvas.removeEventListener('touchmove', tmove);
+      canvas.removeEventListener('touchend', tend);
     };
+    // eslint-disable-next-line
+  }, [bgImg]);
+
+
+// Desktop pointer events (mouse/pen)
+  // Attach via React props for best compatibility
+
+  // Handle bg image upload
+  function handleBgChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setImgUrl(url); // For cleaning up later
+
+    const img = new window.Image();
+    img.onload = () => {
+      setBgImg(img);
+      redraw();
+    };
+    img.src = url;
+  }
+
+  // Reset everything
+  function handleReset() {
+    setBgImg(null);
+    setImgUrl(null);
+    paintedPixelsRef.current.clear();
+    setPaintLeft(PAINT_MAX);
+    redraw();
+  }
+
+  // Redraw bg when needed (on mount or bgImg change)
+  React.useEffect(() => {
+    redraw();
+    // eslint-disable-next-line
   }, []);
 
+  // Cleanup image object URL
+  React.useEffect(() => {
+    return () => {
+      if (imgUrl) URL.revokeObjectURL(imgUrl);
+    };
+    // eslint-disable-next-line
+  }, [imgUrl]);
+
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: '#f7f7f7',
-      display: 'flex',
-
-
-flexDirection: 'column',
-      alignItems: 'center',
-      padding: 40,
-    }}>
-      <h1 style={{ marginBottom: 20 }}>Spray Paint App</h1>
-      <div style={{
-        display: 'flex',
-        gap: 16,
-        alignItems: 'center',
-        marginBottom: 16,
-        flexWrap: 'wrap'
-      }}>
+    <main style={{ padding: '32px', fontFamily: 'sans-serif' }}>
+      <h2>Spray Paint Demo</h2>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
         <label>
-          Радиус:&nbsp;
-          <input type="range" min="5" max="60" defaultValue="15"
-            onInput={e => {
-              radiusRef.current.textContent = e.target.value;
-            }}
-            onChange={e => {
-              radiusRef.current.textContent = e.target.value;
-            }}
-          />
-          <span ref={radiusRef} style={{ marginLeft: 8 }}>15</span> px
+          Цвет:
+          <input type="color" value={color}
+            onChange={e => setColor(e.target.value)} style={{ marginLeft: '8px' }} />
         </label>
         <label>
-          Плотность:&nbsp;
-          <input type="range" min="1" max="60" defaultValue="20"
-            onInput={e => {
-              densityRef.current.textContent = e.target.value;
-            }}
-            onChange={e => {
-              densityRef.current.textContent = e.target.value;
-            }}
-          />
-          <span ref={densityRef} style={{ marginLeft: 8 }}>20</span>
+          Радиус:
+          <input type="range" min={5} max={80} value={radius}
+            onChange={e => setRadius(+e.target.value)}
+            style={{ marginLeft: '8px' }} />
+          <span style={{ marginLeft: '8px' }}>{radius}</span>
         </label>
         <label>
-          Цвет:&nbsp;
-          <input type="color" defaultValue="#000000" ref={colorRef} />
+          Плотность:
+          <input type="range" min={5} max={100} value={density}
+            onChange={e => setDensity(+e.target.value)}
+            style={{ marginLeft: '8px' }} />
+          <span style={{ marginLeft: '8px' }}>{density}</span>
         </label>
-        <button
-          onClick={() => {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            paintLeftRef.current.textContent = 1000;
-          }}
+        <label>
+          Фон:
+          <input type="file" accept="image/*"
+            onChange={handleBgChange}
+            style={{ marginLeft: '8px' }} />
+        </label>
+        <button onClick={handleReset}
           style={{
-            padding: '6px 18px',
-            borderRadius: 8,
+            padding: '4px 16px',
+            borderRadius: '6px',
             border: '1px solid #bbb',
             background: '#fff',
             cursor: 'pointer'
-          }}
-        >
-          Очистить
+          }}>
+          Сбросить
         </button>
-        <span style={{ marginLeft: 24 }}>
-          Осталось краски:&nbsp;<b ref={paintLeftRef}>1000</b>
-        </span>
+        <span style={{marginLeft:'20px'}}>Осталось краски: <b>{paintLeft}</b></span>
       </div>
       <canvas
         ref={canvasRef}
-        width={600}
-        height={400}
+        width={CANVAS_W}
+        height={CANVAS_H}
         style={{
-          border: '2px solid #333',
-          borderRadius: 12,
+          border: '2px solid #222',
+          borderRadius: '10px',
           background: '#fff',
           touchAction: 'none'
         }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       />
-      <p style={{ marginTop: 20, color: '#666' }}>
-        Нажмите и удерживайте мышь или палец для рисования спреем.<br />
-        Можно менять радиус, плотность и цвет.
-      </p>
+      <div style={{marginTop:'12px', color:'#666'}}>Рисуйте мышью или пальцем. Краска ограничена!</div>
     </main>
   );
 }
