@@ -16,32 +16,41 @@ export default function Page() {
   const paintedPixelsRef = useRef(new Set());
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Инициализируем canvas при монтировании
+  // Инициализация и перерисовка canvas
   useEffect(() => {
+    redraw();
+    // eslint-disable-next-line
+  }, [bgImg]);
+
+  function redraw() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f8f8f8';
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  }, []);
-
-  function getCanvasCoords(e) {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const clientX = e.touches?.[0] ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches?.[0] ? e.touches[0].clientY : e.clientY;
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
-    };
-  }
-
-  function redraw() {
-    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.fillStyle = '#f8f8f8';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     if (bgImg) {
       ctx.drawImage(bgImg, 0, 0, CANVAS_W, CANVAS_H);
     }
+  }
+
+  function getCanvasCoords(e) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches?.[0]) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.nativeEvent) {
+      clientX = e.nativeEvent.offsetX + rect.left;
+      clientY = e.nativeEvent.offsetY + rect.top;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
   }
 
   function sprayAt(x, y) {
@@ -66,7 +75,7 @@ export default function Page() {
 
       const px = Math.round(x + dx);
       const py = Math.round(y + dy);
-      const key = `${px},${py}`;
+      const key = ${px},${py};
       if (!paintedPixelsRef.current.has(key)) {
         paintedPixelsRef.current.add(key);
         paintUsed++;
@@ -78,93 +87,114 @@ export default function Page() {
     ctx.globalAlpha = 1;
   }
 
-  const handlePointerDown = (e) => {
-    e.preventDefault();
+  // Универсальный обработчик pointer (мышь/тач)
+  function handlePointerDown(e) {
+    if (paintLeft <= 0) return;
     setIsDrawing(true);
     const { x, y } = getCanvasCoords(e);
     sprayAt(x, y);
-  };
+  }
 
-  const handlePointerMove = (e) => {
-    if (!isDrawing) return;
-    e.preventDefault();
+  function handlePointerMove(e) {
+    if (!isDrawing || paintLeft <= 0) return;
     const { x, y } = getCanvasCoords(e);
     sprayAt(x, y);
-  };
+  }
 
-  const handlePointerUp = () => {
+  function handlePointerUp() {
     setIsDrawing(false);
-  };
+  }
 
-  // Обработка touch (mobile)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  // Сброс холста
+  function handleClear() {
+    paintedPixelsRef.current.clear();
+    setPaintLeft(PAINT_MAX);
+    redraw();
+  }
 
-    canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
-    canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
-    canvas.addEventListener('touchend', handlePointerUp);
-
-    return () => {
-      canvas.removeEventListener('touchstart', handlePointerDown);
-      canvas.removeEventListener('touchmove', handlePointerMove);
-      canvas.removeEventListener('touchend', handlePointerUp);
-    };
-  }, [isDrawing]);
-
-  const handleBgChange = (e) => {
+  // Загрузка фонового изображения
+  function handleBgChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => {
       setBgImg(img);
       URL.revokeObjectURL(url);
     };
     img.src = url;
-  };
+      }
 
-  const handleClear = () => {
-    paintedPixelsRef.current.clear();
-    setPaintLeft(PAINT_MAX);
-    redraw();
-  };
+  // Для корректного рисования при отпускании мыши вне canvas
+  useEffect(() => {
+    function upHandler() {
+      setIsDrawing(false);
+    }
+    window.addEventListener('pointerup', upHandler);
+    return () => window.removeEventListener('pointerup', upHandler);
+  }, []);
+
+  // При изменении цвета/радиуса/плотности — ничего не перерисовываем
 
   return (
-    <div style={{ padding: 20, fontFamily: 'system-ui', background: '#000', color: '#fff', minHeight: '100vh' }}>
-      <h1>🎨 Spray Test</h1>
-      <div style={{ marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <label>
-          Цвет: <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-        </label>
-        <label>
-          Радиус: <input type="range" min="5" max="80" value={radius} onChange={(e) => setRadius(Number(e.target.value))} /> {radius}
-        </label>
-        <label>
-          Плотность: <input type="range" min="10" max="100" value={density} onChange={(e) => setDensity(Number(e.target.value))} /> {density}
-        </label>
-        <label>
-          Фон: <input type="file" accept="image/*" onChange={handleBgChange} />
-        </label>
-        <button onClick={handleClear} style={{ padding: '8px 16px', background: '#333', color: '#fff', border: 'none', borderRadius: 4 }}>
-          Очистить
-        </button>
-        <span>Краски: <b>{paintLeft}</b></span>
+    <div style={{ textAlign: 'center', marginTop: '32px' }}>
+      <h2>Спрей-холст 🎨</h2>
+      <div style={{ marginBottom: '12px' }}>
+        Цвет:{' '}
+        <input type="color" value={color} onChange={e => setColor(e.target.value)} />
+        {' '}Радиус:{' '}
+        <input
+          type="range"
+          min={5}
+          max={80}
+          value={radius}
+          onChange={e => setRadius(Number(e.target.value))}
+        /> {radius}
+        {' '}Плотность:{' '}
+        <input
+          type="range"
+          min={5}
+          max={60}
+          value={density}
+          onChange={e => setDensity(Number(e.target.value))}
+        /> {density}
+        {' '}
+        <button onClick={handleClear}>Очистить</button>
       </div>
-
+      <div style={{ marginBottom: '12px' }}>
+        Загрузить фон:
+        <input type="file" accept="image/*" onChange={handleBgChange} />
+        {bgImg && (
+          <button
+            style={{ marginLeft: '10px' }}
+            onClick={() => setBgImg(null)}
+          >
+            Убрать фон
+          </button>
+        )}
+      </div>
+      <div>
+        Осталось краски: <b>{paintLeft}</b> px
+        {paintLeft === 0 && (
+          <span style={{ color: 'red', marginLeft: '10px' }}>Краска закончилась!</span>
+        )}
+      </div>
       <canvas
         ref={canvasRef}
         width={CANVAS_W}
         height={CANVAS_H}
-        style={{ border: '1px solid #444', background: '#111', display: 'block', maxWidth: '100%' }}
-        onMouseDown={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
+        style={{
+          border: '1px solid #888',
+          background: '#fff',
+          marginTop: '16px',
+          touchAction: 'none',
+          cursor: paintLeft > 0 ? 'crosshair' : 'not-allowed'
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       />
-      <p style={{ marginTop: 10, fontSize: '0.9em', opacity: 0.7 }}>
-        ✅ Работает на десктопе и мобильных. Зажмите мышь/палец и водите. Version: 1.1.35
-      </p>
     </div>
   );
 }
