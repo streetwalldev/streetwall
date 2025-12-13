@@ -121,14 +121,14 @@ export default function Page() {
     // eslint-disable-next-line
   }, [bgImg]);
 
-
-// Desktop pointer events (mouse/pen)
+  // Desktop pointer events (mouse/pen)
   // Attach via React props for best compatibility
 
   // Handle bg image upload
   function handleBgChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (imgUrl) URL.revokeObjectURL(imgUrl); // Clean up previous
     const url = URL.createObjectURL(file);
     setImgUrl(url); // For cleaning up later
 
@@ -140,22 +140,14 @@ export default function Page() {
     img.src = url;
   }
 
-  // Reset everything
-  function handleReset() {
-    setBgImg(null);
-    setImgUrl(null);
+  // Очистка холста и сброс параметров
+  function handleClear() {
     paintedPixelsRef.current.clear();
     setPaintLeft(PAINT_MAX);
     redraw();
   }
 
-  // Redraw bg when needed (on mount or bgImg change)
-  React.useEffect(() => {
-    redraw();
-    // eslint-disable-next-line
-  }, []);
-
-  // Cleanup image object URL
+  // Удаляем objectURL при размонтировании/смене картинки
   React.useEffect(() => {
     return () => {
       if (imgUrl) URL.revokeObjectURL(imgUrl);
@@ -163,63 +155,52 @@ export default function Page() {
     // eslint-disable-next-line
   }, [imgUrl]);
 
+  // Стили (можно вынести в css)
+  const styles = {
+    root: { fontFamily: 'system-ui,sans-serif', background: '#faf9f7', minHeight: '100vh', padding: '20px' },
+    controls: { display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' },
+    label: { display: 'flex', alignItems: 'center', gap: '6px' },
+    button: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' },
+    canvasWrap: { maxWidth: CANVAS_W },
+    canvas: { border: '2px solid #222', background: '#fff', display: 'block' }
+  };
+
   return (
-    <main style={{ padding: '32px', fontFamily: 'sans-serif' }}>
-      <h2>Spray Paint Demo</h2>
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
-        <label>
+    <div style={styles.root}>
+      <div style={styles.controls}>
+        <label style={styles.label}>
           Цвет:
-          <input type="color" value={color}
-            onChange={e => setColor(e.target.value)} style={{ marginLeft: '8px' }} />
+          <input type="color" value={color} onChange={e => setColor(e.target.value)} />
         </label>
-        <label>
+        <label style={styles.label}>
           Радиус:
-          <input type="range" min={5} max={80} value={radius}
-            onChange={e => setRadius(+e.target.value)}
-            style={{ marginLeft: '8px' }} />
-          <span style={{ marginLeft: '8px' }}>{radius}</span>
+          <input type="range" min={5} max={80} value={radius} onChange={e => setRadius(Number(e.target.value))} />
+          {radius}
         </label>
-        <label>
+        <label style={styles.label}>
           Плотность:
-          <input type="range" min={5} max={100} value={density}
-            onChange={e => setDensity(+e.target.value)}
-            style={{ marginLeft: '8px' }} />
-          <span style={{ marginLeft: '8px' }}>{density}</span>
+          <input type="range" min={10} max={100} value={density} onChange={e => setDensity(Number(e.target.value))} />
+          {density}
         </label>
-        <label>
-          Фон:
-          <input type="file" accept="image/*"
-            onChange={handleBgChange}
-            style={{ marginLeft: '8px' }} />
+        <label style={styles.label}>
+          Подложка:
+          <input type="file" accept="image/*" onChange={handleBgChange} />
         </label>
-        <button onClick={handleReset}
-          style={{
-            padding: '4px 16px',
-            borderRadius: '6px',
-            border: '1px solid #bbb',
-            background: '#fff',
-            cursor: 'pointer'
-          }}>
-          Сбросить
-        </button>
-        <span style={{marginLeft:'20px'}}>Осталось краски: <b>{paintLeft}</b></span>
+        <button style={styles.button} onClick={handleClear}>Очистить</button>
+        <span>Краски осталось: <b>{paintLeft}</b></span>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_W}
-        height={CANVAS_H}
-        style={{
-          border: '2px solid #222',
-          borderRadius: '10px',
-          background: '#fff',
-          touchAction: 'none'
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-      />
-      <div style={{marginTop:'12px', color:'#666'}}>Рисуйте мышью или пальцем. Краска ограничена!</div>
-    </main>
+      <div style={styles.canvasWrap}>
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_W}
+          height={CANVAS_H}
+          style={styles.canvas}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+        />
+      </div>
+    </div>
   );
 }
