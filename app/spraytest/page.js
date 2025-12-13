@@ -16,7 +16,6 @@ export default function Page() {
   const paintedPixelsRef = useRef(new Set());
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Инициализация и перерисовка canvas
   useEffect(() => {
     redraw();
     // eslint-disable-next-line
@@ -87,7 +86,6 @@ export default function Page() {
     ctx.globalAlpha = 1;
   }
 
-  // Универсальный обработчик pointer (мышь/тач)
   function handlePointerDown(e) {
     if (paintLeft <= 0) return;
     setIsDrawing(true);
@@ -105,14 +103,12 @@ export default function Page() {
     setIsDrawing(false);
   }
 
-  // Сброс холста
   function handleClear() {
     paintedPixelsRef.current.clear();
     setPaintLeft(PAINT_MAX);
     redraw();
   }
 
-  // Загрузка фонового изображения
   function handleBgChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -123,9 +119,8 @@ export default function Page() {
       URL.revokeObjectURL(url);
     };
     img.src = url;
-      }
+  }
 
-  // Для корректного рисования при отпускании мыши вне canvas
   useEffect(() => {
     function upHandler() {
       setIsDrawing(false);
@@ -134,8 +129,6 @@ export default function Page() {
     return () => window.removeEventListener('pointerup', upHandler);
   }, []);
 
-  // При изменении цвета/радиуса/плотности — ничего не перерисовываем
-
   return (
     <div style={{ textAlign: 'center', marginTop: '32px' }}>
       <h2>Спрей-холст 🎨</h2>
@@ -143,7 +136,7 @@ export default function Page() {
         Цвет:{' '}
         <input type="color" value={color} onChange={e => setColor(e.target.value)} />
         {' '}Радиус:{' '}
-        <input
+        <input          
           type="range"
           min={5}
           max={80}
