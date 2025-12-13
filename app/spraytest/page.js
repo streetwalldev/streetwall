@@ -1,83 +1,140 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-const COLORS = [
-  '#000000', '#ff0000', '#00ff00', '#0000ff',
-  '#ffff00', '#ff00ff', '#00ffff', '#ffffff',
-];
-
-export default function Home() {
+export default function SprayPage() {
   const canvasRef = useRef(null);
-  const [color, setColor] = useState('#000000');
-  const [size, setSize] = useState(15);
-  const [drawing, setDrawing] = useState(false);
+  const radiusRef = useRef(null);
+  const densityRef = useRef(null);
+  const paintLeftRef = useRef(null);
+  const colorRef = useRef(null);
 
-  // Spray logic
-  const sprayInterval = useRef(null);
-
-  function getRandomOffset(radius) {
-    // Uniform distribution within a circle
-    const angle = Math.random() * 2 * Math.PI;
-    const r = radius * Math.sqrt(Math.random());
-    return {
-      x: r * Math.cos(angle),
-      y: r * Math.sin(angle),
+  useEffect(() => {
+    // Настройки спрея
+    const config = {
+      radius: 15,
+      density: 20,
+      color: '#000000',
+      paintLeft: 1000,
     };
-  }
 
-  function spray(x, y) {
-    const ctx = canvasRef.current.getContext('2d');
-    const density = Math.floor(size * 2); // Number of dots per tick
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
 
-    for (let i = 0; i < density; i++) {
-      const offset = getRandomOffset(size);
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x + offset.x, y + offset.y, 1, 0, 2 * Math.PI);
-      ctx.fill();
+    let isDrawing = false;
+    let sprayInterval;
+
+    // UI элементы
+    const radiusVal = radiusRef.current;
+    const densityVal = densityRef.current;
+    const paintLeftEl = paintLeftRef.current;
+    const colorInput = colorRef.current;
+
+    // Инициализация UI
+    radiusVal.textContent = config.radius;
+    densityVal.textContent = config.density;
+    paintLeftEl.textContent = config.paintLeft;
+
+    // Функция распыления
+    function spray(x, y) {
+      if (config.paintLeft <= 0) return;
+      for (let i = 0; i < config.density; i++) {
+        const angle = Math.random() * 2 * Math.PI;
+        const r = config.radius * Math.sqrt(Math.random());
+        const offsetX = r * Math.cos(angle);
+        const offsetY = r * Math.sin(angle);
+
+        ctx.fillStyle = config.color;
+        ctx.beginPath();
+        ctx.arc(x + offsetX, y + offsetY, 1, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      config.paintLeft--;
+      paintLeftEl.textContent = config.paintLeft;
     }
-  }
 
-  function handlePointerDown(e) {
-    setDrawing(true);
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-    spray(x, y);
+    // Координаты мыши/касания относительно canvas
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top,
+        };
+      }
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
 
-    sprayInterval.current = setInterval(() => {
-      const evt = e.touches ? e.touches[0] : e;
-      const xx = evt.clientX - rect.left;
-      const yy = evt.clientY - rect.top;
-      spray(xx, yy);
-    }, 50);
-  }
+    function handlePointerDown(e) {
+      isDrawing = true;
+      const { x, y } = getPos(e);
+      spray(x, y);
+      sprayInterval = setInterval(() => {
+        if (!isDrawing) return;
+        const pos = getPos(e);
+        spray(pos.x, pos.y);
+      }, 50);
+    }
 
-  function handlePointerMove(e) {
-    if (!drawing) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-    spray(x, y);
-  }
+    function handlePointerMove(e) {
+      if (!isDrawing) return;
+      const { x, y } = getPos(e);
+      spray(x, y);
+    }
 
-  function handlePointerUp() {
-    setDrawing(false);
-    clearInterval(sprayInterval.current);
-  }
+    function handlePointerUp() {
+      isDrawing = false;
+      clearInterval(sprayInterval);
+    }
 
-  function handleClear() {
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-  }
+    function handleClear() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      config.paintLeft = 1000;
+      paintLeftEl.textContent = config.paintLeft;
+    }
+
+    function handleRadiusChange(e) {
+      config.radius = Number(e.target.value);
+      radiusVal.textContent = config.radius;
+    }
+
+    function handleDensityChange(e) {
+      config.density = Number(e.target.value);
+      densityVal.textContent = config.density;
+    }
+
+    function handleColorChange(e) {
+      config.color = e.target.value;
+    }
+
+    // Навешиваем события
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    colorInput.addEventListener('input', handleColorChange);
+
+    // Чистим за собой при размонтировании
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+
+      colorInput.removeEventListener('input', handleColorChange);
+    };
+  }, []);
 
   return (
     <main style={{
       minHeight: '100vh',
       background: '#f7f7f7',
       display: 'flex',
-      flexDirection: 'column',
+
+
+flexDirection: 'column',
       alignItems: 'center',
       padding: 40,
     }}>
@@ -90,38 +147,53 @@ export default function Home() {
         flexWrap: 'wrap'
       }}>
         <label>
-          Цвет:
-          <select
-            value={color}
-            onChange={e => setColor(e.target.value)}
-            style={{ marginLeft: 8 }}
-          >
-            {COLORS.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          Радиус:&nbsp;
+          <input type="range" min="5" max="60" defaultValue="15"
+            onInput={e => {
+              radiusRef.current.textContent = e.target.value;
+            }}
+            onChange={e => {
+              radiusRef.current.textContent = e.target.value;
+            }}
+          />
+          <span ref={radiusRef} style={{ marginLeft: 8 }}>15</span> px
         </label>
         <label>
-          Размер:
-          <input
-            type="range"
-            min={5}
-            max={60}
-            value={size}
-            onChange={e => setSize(Number(e.target.value))}
-            style={{ marginLeft: 8 }}
+          Плотность:&nbsp;
+          <input type="range" min="1" max="60" defaultValue="20"
+            onInput={e => {
+              densityRef.current.textContent = e.target.value;
+            }}
+            onChange={e => {
+              densityRef.current.textContent = e.target.value;
+            }}
           />
-          <span style={{ marginLeft: 8 }}>{size}px</span>
+          <span ref={densityRef} style={{ marginLeft: 8 }}>20</span>
         </label>
-        <button onClick={handleClear} style={{
-          padding: '6px 18px',
-          borderRadius: 8,
-          border: '1px solid #bbb',
-          background: '#fff',
-          cursor: 'pointer'
-        }}>
+        <label>
+          Цвет:&nbsp;
+          <input type="color" defaultValue="#000000" ref={colorRef} />
+        </label>
+        <button
+          onClick={() => {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            paintLeftRef.current.textContent = 1000;
+          }}
+          style={{
+            padding: '6px 18px',
+            borderRadius: 8,
+            border: '1px solid #bbb',
+            background: '#fff',
+            cursor: 'pointer'
+          }}
+        >
           Очистить
         </button>
+        <span style={{ marginLeft: 24 }}>
+          Осталось краски:&nbsp;<b ref={paintLeftRef}>1000</b>
+        </span>
       </div>
       <canvas
         ref={canvasRef}
@@ -133,17 +205,11 @@ export default function Home() {
           background: '#fff',
           touchAction: 'none'
         }}
-
-
-onMouseDown={handlePointerDown}
-        onTouchStart={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onTouchMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onTouchEnd={handlePointerUp}
-        onMouseLeave={handlePointerUp}
       />
-      <p style={{marginTop:20, color:'#666'}}>Нажмите и удерживайте мышь или палец для рисования спреем.</p>
+      <p style={{ marginTop: 20, color: '#666' }}>
+        Нажмите и удерживайте мышь или палец для рисования спреем.<br />
+        Можно менять радиус, плотность и цвет.
+      </p>
     </main>
   );
 }
