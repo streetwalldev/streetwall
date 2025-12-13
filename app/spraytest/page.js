@@ -1,131 +1,170 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
-const WIDTH = 2000;
-const HEIGHT = 1000;
+const CANVAS_W = 800;
+const CANVAS_H = 600;
+const PAINT_MAX = 8000;
 
 export default function Page() {
   const canvasRef = useRef(null);
-  const [drawing, setDrawing] = useState(false);
-  const [color, setColor] = useState('#1e1e1e');
-  const [radius, setRadius] = useState(28); // "разброс" баллона
-  const [density, setDensity] = useState(40); // сколько точек за один "пшик"
+  const [color, setColor] = useState('#ff0000');
+  const [radius, setRadius] = useState(20);
+  const [density, setDensity] = useState(30);
+  const [paintLeft, setPaintLeft] = useState(PAINT_MAX);
+  const [bgImg, setBgImg] = useState(null);
+  const paintedPixelsRef = useRef(new Set());
+  const [isDrawing, setIsDrawing] = useState(false);
 
-  // Получить координаты относительно canvas
-  function getCoords(e) {
+  // Инициализируем canvas при монтировании
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }, []);
+
+  function getCanvasCoords(e) {
     const rect = canvasRef.current.getBoundingClientRect();
+    const clientX = e.touches?.[0] ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches?.[0] ? e.touches[0].clientY : e.clientY;
     return {
-      x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
-      y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
   }
 
-  function spray(x, y) {
+  function redraw() {
     const ctx = canvasRef.current.getContext('2d');
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, CANVAS_W, CANVAS_H);
+    }
+  }
+
+  function sprayAt(x, y) {
+    if (paintLeft <= 0) return;
+    const ctx = canvasRef.current.getContext('2d');
+    let paintUsed = 0;
+
     for (let i = 0; i < density; i++) {
-      // По кругу с равномерной плотностью, но случайным углом и радиусом
-      const angle = Math.random() * Math.PI * 2;
-      // sqrt для более естественного распределения ближе к центру
-      const r = Math.sqrt(Math.random()) * radius;
-      const dx = Math.cos(angle) * r;
-      const dy = Math.sin(angle) * r;
-      ctx.globalAlpha = Math.random() * 0.4 + 0.15; // полупрозрачность
+      if (paintLeft - paintUsed <= 0) break;
+
+      const angle = Math.random() * 2 * Math.PI;
+      const dist = Math.random() * radius;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      const size = 1.2 + Math.random() * 2.3;
+
+      ctx.globalAlpha = 0.12 + Math.random() * 0.48;
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(x + dx, y + dy, 1.2 + Math.random() * 2.2, 0, Math.PI * 2);
+      ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
       ctx.fill();
+
+      const px = Math.round(x + dx);
+      const py = Math.round(y + dy);
+      const key = `${px},${py}`;
+      if (!paintedPixelsRef.current.has(key)) {
+        paintedPixelsRef.current.add(key);
+        paintUsed++;
+      }
+    }
+    if (paintUsed > 0) {
+      setPaintLeft(prev => Math.max(0, prev - paintUsed));
     }
     ctx.globalAlpha = 1;
   }
 
-  function handlePointerDown(e) {
-    setDrawing(true);
-    const { x, y } = getCoords(e);
-    spray(x, y);
-  }
-  function handlePointerMove(e) {
-    if (!drawing) return;
-    const { x, y } = getCoords(e);
-    spray(x, y);
-  }
-  function handlePointerUp() {
-    setDrawing(false);
-  }
-  function clearCanvas() {
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
-  }
+  const handlePointerDown = (e) => {
+    e.preventDefault();
+    setIsDrawing(true);
+    const { x, y } = getCanvasCoords(e);
+    sprayAt(x, y);
+  };
 
-  // Для мобильных тачей
-  React.useEffect(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    c.addEventListener('touchstart', handlePointerDown, { passive: false });
-    c.addEventListener('touchmove', handlePointerMove, { passive: false });
-    c.addEventListener('touchend', handlePointerUp);
+  const handlePointerMove = (e) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const { x, y } = getCanvasCoords(e);
+    sprayAt(x, y);
+  };
+
+  const handlePointerUp = () => {
+    setIsDrawing(false);
+  };
+
+  // Обработка touch (mobile)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+    canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+    canvas.addEventListener('touchend', handlePointerUp);
+
     return () => {
-      c.removeEventListener('touchstart', handlePointerDown);
-      c.removeEventListener('touchmove', handlePointerMove);
-      c.removeEventListener('touchend', handlePointerUp);
+      canvas.removeEventListener('touchstart', handlePointerDown);
+      canvas.removeEventListener('touchmove', handlePointerMove);
+      canvas.removeEventListener('touchend', handlePointerUp);
     };
-    // eslint-disable-next-line
-  }, []);
+  }, [isDrawing]);
+
+  const handleBgChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setBgImg(img);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
+  const handleClear = () => {
+    paintedPixelsRef.current.clear();
+    setPaintLeft(PAINT_MAX);
+    redraw();
+  };
 
   return (
-    <div style={{padding:20}}>
-      <div style={{marginBottom:12, display:'flex', gap:12, alignItems:'center', flexWrap:'wrap'}}>
+    <div style={{ padding: 20, fontFamily: 'system-ui', background: '#000', color: '#fff', minHeight: '100vh' }}>
+      <h1>🎨 Spray Test</h1>
+      <div style={{ marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <label>
-          Цвет:{' '}
-          <input type="color" value={color} onChange={e => setColor(e.target.value)} />
+          Цвет: <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </label>
         <label>
-          Радиус:{' '}
-          <input
-            type="range"
-            min={8}
-            max={80}
-            value={radius}
-            onChange={e => setRadius(Number(e.target.value))}
-          />{' '}
-          {radius}
+          Радиус: <input type="range" min="5" max="80" value={radius} onChange={(e) => setRadius(Number(e.target.value))} /> {radius}
         </label>
         <label>
-          Плотность:{' '}
-          <input
-            type="range"
-            min={10}
-            max={100}
-            value={density}
-            onChange={e => setDensity(Number(e.target.value))}
-          />{' '}
-          {density}
+          Плотность: <input type="range" min="10" max="100" value={density} onChange={(e) => setDensity(Number(e.target.value))} /> {density}
         </label>
-        <button onClick={clearCanvas} style={{padding:'6px 18px', borderRadius:5}}>Очистить</button>
-      </div>
-      <div style={{border:'2px solid #333', borderRadius:8, overflow:'hidden', background:'#fff'}}>
-        <canvas
-          ref={canvasRef}
-          width={WIDTH}
-          height={HEIGHT}
-          style={{
-            width: WIDTH,
-            height: HEIGHT,
-            touchAction: 'none',
-            display:'block',
-            cursor: 'crosshair'
-          }}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-        />
+        <label>
+          Фон: <input type="file" accept="image/*" onChange={handleBgChange} />
+        </label>
+        <button onClick={handleClear} style={{ padding: '8px 16px', background: '#333', color: '#fff', border: 'none', borderRadius: 4 }}>
+          Очистить
+        </button>
+        <span>Краски: <b>{paintLeft}</b></span>
       </div>
 
-
-<div style={{fontSize:12, color:'#888', marginTop:8}}>
-        Размер холста: {WIDTH} x {HEIGHT} px. Рисуйте мышью или пальцем.
-      </div>
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_W}
+        height={CANVAS_H}
+        style={{ border: '1px solid #444', background: '#111', display: 'block', maxWidth: '100%' }}
+        onMouseDown={handlePointerDown}
+        onMouseMove={handlePointerMove}
+        onMouseUp={handlePointerUp}
+        onMouseLeave={handlePointerUp}
+      />
+      <p style={{ marginTop: 10, fontSize: '0.9em', opacity: 0.7 }}>
+        ✅ Работает на десктопе и мобильных. Зажмите мышь/палец и водите. Version: 1.1.35
+      </p>
     </div>
   );
 }
