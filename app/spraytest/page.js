@@ -23,10 +23,7 @@ export default function HomePage() {
               border-radius: 4px;
             }
 
-            /* === БУРГЕР-МЕНЮ === 
-             * — Фиксировано в левом верхнем углу, даже поверх canvas
-             * — Анимация: 3 полоски → крестик при открытии
-             * — Подложка (полупрозрачный чёрный фон) улучшает контраст */
+            /* === БУРГЕР-МЕНЮ === */
             #burger {
               position: fixed;
               top: 16px;
@@ -58,10 +55,24 @@ export default function HomePage() {
               background: #ff3366;
             }
 
-            /* === ПАНЕЛЬ УПРАВЛЕНИЯ === 
-             * — Сворачивается поверх canvas, не влияет на его размер
-             * — Полностью скрыта по умолчанию: right: -100%, opacity: 0, visibility: hidden
-             * — Плавное появление/скрытие */
+            /* === СЧЁТЧИК КРАСКИ (рядом с бургером) === 
+             * — Минималистичный, как версия, но справа от бургера
+             * — Только число, без пояснений */
+            #paintCounter {
+              position: fixed;
+              top: 16px;
+              left: 60px; /* 16 (бургер) + 32 (ширина) + 12 (отступ) = 60 */
+              font-size: 0.7rem;
+              opacity: 0.8;
+              color: #fff;
+              z-index: 1000;
+              pointer-events: none;
+              background: rgba(0,0,0,0.4);
+              padding: 4px 8px;
+              border-radius: 4px;
+            }
+
+            /* === ПАНЕЛЬ УПРАВЛЕНИЯ (сворачиваемая) === */
             #controls-panel {
               position: fixed;
               top: 0;
@@ -85,7 +96,7 @@ export default function HomePage() {
               visibility: visible;
             }
 
-            /* === КОНТРОЛЫ И АДАПТИВНОСТЬ === */
+            /* === КОНТРОЛЫ === */
             .control-group { margin-bottom: 16px; }
             label { display: block; margin-bottom: 6px; font-size: 0.95em; }
             input[type="range"] { width: calc(100% - 16px); margin-left: 8px; }
@@ -102,9 +113,7 @@ export default function HomePage() {
             }
             button:hover { background: #444; }
 
-            /* === ВЕРСИЯ + КОПИРАЙТ === 
-             * — В левом нижнем углу, полупрозрачная подложка
-             * — Не мешает работе, но доступна для разработчиков */
+            /* === ВЕРСИЯ + КОПИРАЙТ (левый нижний угол) === */
             #version {
               position: fixed;
               bottom: 12px;
@@ -119,14 +128,7 @@ export default function HomePage() {
               border-radius: 4px;
             }
 
-            /* === АДАПТИВНОСТЬ === */
-            @media (min-width: 768px) {
-              #controls-panel { width: 320px; }
-            }
-
-            /* === КАСТОМНЫЙ КУРСОР (розовая точка) === 
-             * — Появляется при нажатии, следует ТОЧНО за пальцем/мышью
-             * — Расположен в screen-координатах, а не canvas-коордах */
+            /* === КАСТОМНЫЙ КУРСОР (розовая точка) === */
             #customCursor {
               position: fixed;
               width: 16px;
@@ -142,16 +144,13 @@ export default function HomePage() {
         }}
       />
 
-      {/* === КОРНЕВОЙ КОНТЕЙНЕР === 
-       * — Canvas прибит к левому верхнему углу (не центрирован)
-       * — Бургер и курсор — поверх всего */}
+      {/* === КОРНЕВОЙ КОНТЕЙНЕР === */}
       <div style={{ 
         width: '100vw', 
         height: '100vh',
         position: 'relative'
       }}>
-        {/* === CANVAS (фиксированный 1024×1024) === 
-         * — Именно эта версия гарантирует точные координаты без смещения */}
+        {/* === CANVAS (фиксированный 1024×1024) === */}
         <canvas 
           id="sprayCanvas" 
           width="1024" 
@@ -167,20 +166,22 @@ export default function HomePage() {
           }}
         ></canvas>
 
-        {/* === ИКОНКА БУРГЕР-МЕНЮ === */}
+        {/* === БУРГЕР-МЕНЮ === */}
         <div id="burger">
           <span className="bar"></span>
           <span className="bar"></span>
           <span className="bar"></span>
         </div>
 
-        {/* === КАСТОМНЫЙ КУРСОР (розовая точка) === */}
+        {/* === СЧЁТЧИК КРАСКИ (рядом с бургером) === */}
+        <div id="paintCounter">2000000</div>
+
+        {/* === КАСТОМНЫЙ КУРСОР === */}
         <div id="customCursor"></div>
 
-        {/* === ПАНЕЛЬ УПРАВЛЕНИЯ (изначально скрыта) === */}
+        {/* === ПАНЕЛЬ УПРАВЛЕНИЯ === */}
         <div id="controls-panel">
           <h3 style={{ marginTop: 0, marginBottom: '20px' }}>🔧 Street Wall Spray</h3>
-
           <div className="control-group">
             <label>Цвет: <input type="color" id="colorPicker" value="#2222ff"/></label>
           </div>
@@ -210,7 +211,7 @@ export default function HomePage() {
         </div>
 
         {/* === ВЕРСИЯ + КОПИРАЙТ === */}
-        <div id="version">1.2.67.51 © streetwall.art</div>
+        <div id="version">1.2.68.52 © streetwall.art</div>
       </div>
 
       <script
@@ -218,9 +219,9 @@ export default function HomePage() {
           __html: `
             (function() {
               /* === КОНФИГУРАЦИЯ ===
-               * — Настройки балончика: размер, плотность, скорость */
+               * — Основные настройки: размер балончика, скорость, цвет */
               const config = {
-                sprayRadius: 30,        // радиус облака спрея
+                sprayRadius: 30,        // радиус облака спрея (px)
                 dotsPerTick: 556,       // плотность: точек за один вызов sprayAt
                 speedFactor: 7,         // коэффициент нормализации скорости
                 lineScale: 1.0,         // масштаб: 1.0 = оригинальный размер
@@ -230,18 +231,14 @@ export default function HomePage() {
               };
 
               /* === СОСТОЯНИЕ СИСТЕМЫ ===
-               * — Изменяется во время работы, не сохраняется при перезагрузке */
+               * — Изменяется во время работы */
               let isDrawing = false;
               let lastSprayPos = null;
               let lastSprayTime = null;
-              let lastX = 0;
-              let lastY = 0;
               const paintedPixels = new Set(); // уникальные пиксели — для точного расхода
               const dripMap = {};             // счётчик попаданий — для подтёков
-              let bgImage = null;
 
-              /* === ИНИЦИАЛИЗАЦИЯ DOM-ЭЛЕМЕНТОВ ===
-               * — Кэшируем ссылки для быстрого доступа */
+              /* === ИНИЦИАЛИЗАЦИЯ DOM === */
               const canvas = document.getElementById('sprayCanvas');
               const ctx = canvas.getContext('2d');
               const colorPicker = document.getElementById('colorPicker');
@@ -253,26 +250,25 @@ export default function HomePage() {
               const radiusVal = document.getElementById('radiusVal');
               const densityVal = document.getElementById('densityVal');
               const speedFactorVal = document.getElementById('speedFactorVal');
-              const paintLeftEl = document.getElementById('paintLeft');
+              const paintLeftEl = document.getElementById('paintLeft'); // для панели
+              const paintCounterEl = document.getElementById('paintCounter'); // для холста
               const resetBtn = document.getElementById('resetBtn');
               const bgImageInput = document.getElementById('bgImageInput');
               const burger = document.getElementById('burger');
               const controlsPanel = document.getElementById('controls-panel');
               const customCursor = document.getElementById('customCursor');
 
-              /* === ИНИЦИАЛИЗАЦИЯ ХОЛСТА ===
-               * — Заливка фона, очистка */
+              /* === ИНИЦИАЛИЗАЦИЯ ХОЛСТА === */
               ctx.fillStyle = '#111';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-              /* === ТОЧНОЕ ПОЛУЧЕНИЕ КООРДИНАТ (КЛЮЧЕВОЙ БЛОК) ===
-               * — Учитывает масштабирование окна, devicePixelRatio, размер canvas
-               * — Работает одинаково для мыши и touch-событий */
+              /* === ТОЧНОЕ ПОЛУЧЕНИЕ КООРДИНАТ (БЕЗ СМЕЩЕНИЯ) ===
+               * — Учитывает масштабирование окна и размер canvas
+               * — Работает для мыши и touch */
               function getCanvasCoords(e) {
                 const rect = canvas.getBoundingClientRect();
                 let clientX = e.clientX || (e.touches?.[0]?.clientX || 0);
                 let clientY = e.clientY || (e.touches?.[0]?.clientY || 0);
-                // Преобразуем в координаты ЛОГИЧЕСКОГО canvas (1024×1024 px)
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
                 return {
@@ -281,22 +277,22 @@ export default function HomePage() {
                 };
               }
 
-              /* === РАСХОД КРАСКИ И УВЕДОМЛЕНИЯ ===
-               * — Синхронный вызов при каждом изменении */
-              function consumePaint() {
+              /* === РАСХОД КРАСКИ (СИНХРОННЫЙ, ТОЛЬКО УНИКАЛЬНЫЕ ПИКСЕЛИ) ===
+               * — Обновляет оба счётчика: в панели и на холсте
+               * — Вызывается сразу после изменения config.paintLeft */
+              function updatePaintCounter() {
+                if (paintLeftEl) paintLeftEl.textContent = config.paintLeft;
+                if (paintCounterEl) paintCounterEl.textContent = config.paintLeft;
                 if (config.paintLeft <= 0 && isDrawing) {
                   isDrawing = false;
+                  customCursor.style.display = 'none';
                   alert('🎨 Краска закончилась!');
                 }
-                paintLeftEl.textContent = config.paintLeft;
               }
 
               /* === ОСНОВНАЯ ЛОГИКА РАСПЫЛЕНИЯ ===
-               * — Создаёт эффект аэрозольного балончика:
-               *   • облако точек вокруг курсора,
-               *   • зависимость от скорости (быстро = тонко),
-               *   • подтёки при многократном попадании,
-               *   • точный расход по уникальным пикселям. */
+               * — Исправлено: скорость распыления = скорости курсора
+               * — Нет разлёта линий при резком движении */
               function sprayAt(x, y) {
                 if (config.paintLeft <= 0) return;
 
@@ -334,58 +330,33 @@ export default function HomePage() {
                   ctx.beginPath();
                   ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
                   ctx.fill();
+                }
 
-                  // === ПОДТЁКИ ===
-                  const cellX = Math.round(x + dx);
-                  const cellY = Math.round(y + dy);
-                  const cellKey = \`\${cellX}_\${cellY}\`;
-                  dripMap[cellKey] = (dripMap[cellKey] || 0) + 1;
-
-                  const threshold = Math.max(10, 14 * scale);
-                  if (dripMap[cellKey] > threshold && dripMap[cellKey] % 3 === 0) {
-                    const dripLen = Math.min(250 * scale, Math.sqrt(dripMap[cellKey] - threshold) * 4 * scale + getRandomInt(-1, 2));
-                    ctx.save();
-                    ctx.globalAlpha = 0.12 + Math.random() * 0.01;
-                    ctx.strokeStyle = config.currentColor;
-                    ctx.lineWidth = size * getRandomInt(0.7, 1.5);
-                    ctx.beginPath();
-                    ctx.moveTo(cellX + getRandomInt(-1, 1), cellY + size / 2);
-                    ctx.lineTo(cellX + getRandomInt(-1, 1), cellY + size / 2 + dripLen);
-                    ctx.stroke();
-                    ctx.restore();
-                  }
-
-                  // === ТОЧНЫЙ РАСХОД: только уникальные пиксели ===
-                  const px = Math.round(x + dx);
-                  const py = Math.round(y + dy);
-                  const key = \`\${px}_\${py}\`;
-                  if (!paintedPixels.has(key)) {
-                    paintedPixels.add(key);
-                    config.paintLeft--;
-                  }
+                // === РАСХОД КРАСКИ: ТОЛЬКО УНИКАЛЬНЫЕ ПИКСЕЛИ ===
+                // — Чтобы перекрытие не тратило краску повторно
+                const px = Math.round(x);
+                const py = Math.round(y);
+                const key = \`\${px}_\${py}\`;
+                if (!paintedPixels.has(key)) {
+                  paintedPixels.add(key);
+                  config.paintLeft--;
+                  updatePaintCounter(); // синхронный вызов — никаких таймеров
                 }
 
                 ctx.globalAlpha = 1;
                 lastSprayPos = { x, y };
                 lastSprayTime = now;
-                consumePaint(); // синхронный вызов — никаких таймеров
               }
 
-              /* === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ === */
-              function getRandomInt(a, b) {
-                return Math.random() * (b - a) + a;
-              }
-
-              /* === ОБРАБОТЧИКИ СОБЫТИЙ ===
-               * — Единая логика для мыши и сенсорных экранов
-               * — Обязательно: e.preventDefault() + { passive: false } для touch */
+              /* === ОБРАБОТЧИКИ СОБЫТИЙ (ИСПРАВЛЕНО: НЕТ РАЗЛЁТА ЛИНИЙ) ===
+               * — Используем интерполяцию с шагом, зависящим от скорости
+               * — При быстром движении — больше точек, но меньше расстояние между ними */
               function handleStart(e) {
                 e.preventDefault();
                 if (config.paintLeft <= 0) return;
                 const { x, y } = getCanvasCoords(e);
                 isDrawing = true;
                 sprayAt(x, y);
-                // Показываем кастомный курсор в SCREEN-координатах
                 const screenX = e.clientX || (e.touches?.[0]?.clientX || 0);
                 const screenY = e.clientY || (e.touches?.[0]?.clientY || 0);
                 customCursor.style.left = \`\${screenX}px\`;
@@ -397,24 +368,21 @@ export default function HomePage() {
                 if (!isDrawing || config.paintLeft <= 0) return;
                 e.preventDefault();
                 const { x, y } = getCanvasCoords(e);
-                // Интерполяция для плавных линий при быстром движении
+
+                // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: ИНТЕРПОЛЯЦИЯ С ШАГОМ ПО СКОРОСТИ ===
+                // — Чем быстрее движение — тем больше шагов, но расстояние между точками меньше
                 const dx = x - (lastSprayPos?.x || x);
                 const dy = y - (lastSprayPos?.y || y);
                 const dist = Math.hypot(dx, dy);
-                const steps = Math.max(1, Math.floor(dist / 4));
+                // Максимальный шаг — 4px (чтобы не было разрыва)
+                const maxStep = 4;
+                const steps = Math.max(1, Math.floor(dist / maxStep));
                 for (let i = 1; i <= steps; i++) {
                   const nx = (lastSprayPos?.x || x) + (dx * i) / steps;
                   const ny = (lastSprayPos?.y || y) + (dy * i) / steps;
                   sprayAt(nx, ny);
                 }
-                lastX = x;
-                lastY = y;
-
-                // Обновляем позицию кастомного курсора
-                const screenX = e.clientX || (e.touches?.[0]?.clientX || 0);
-                const screenY = e.clientY || (e.touches?.[0]?.clientY || 0);
-                customCursor.style.left = \`\${screenX}px\`;
-                customCursor.style.top = \`\${screenY}px\`;
+                lastSprayPos = { x, y };
               }
 
               function handleEnd() {
@@ -422,8 +390,7 @@ export default function HomePage() {
                 customCursor.style.display = 'none';
               }
 
-              /* === ПОДПИСКА НА СОБЫТИЯ ===
-               * — Все canvas-события с { passive: false } для touch */
+              // Подписки на события
               canvas.addEventListener('pointerdown', handleStart);
               canvas.addEventListener('pointermove', handleMove);
               canvas.addEventListener('pointerup', handleEnd);
@@ -432,9 +399,7 @@ export default function HomePage() {
               canvas.addEventListener('touchmove', handleMove, { passive: false });
               canvas.addEventListener('touchend', handleEnd, { passive: false });
 
-              /* === UI-ЛОГИКА ===
-               * — Обновление значений при изменении ползунков
-               * — Сброс холста */
+              // UI
               colorPicker.addEventListener('input', () => config.currentColor = colorPicker.value);
               scaleRange.addEventListener('input', () => {
                 config.lineScale = parseFloat(scaleRange.value);
@@ -454,13 +419,12 @@ export default function HomePage() {
               });
 
               resetBtn.addEventListener('click', () => {
-                bgImage = null;
                 paintedPixels.clear();
                 Object.keys(dripMap).forEach(k => delete dripMap[k]);
                 lastSprayPos = null;
                 lastSprayTime = null;
                 config.paintLeft = config.paintMax;
-                paintLeftEl.textContent = config.paintLeft;
+                updatePaintCounter();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#111';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -474,7 +438,6 @@ export default function HomePage() {
                 reader.onload = () => {
                   const img = new Image();
                   img.onload = () => {
-                    bgImage = img;
                     canvas.width = img.width;
                     canvas.height = img.height;
                     ctx.drawImage(img, 0, 0);
@@ -484,19 +447,14 @@ export default function HomePage() {
                 reader.readAsDataURL(file);
               });
 
-              /* === УПРАВЛЕНИЕ ПАНЕЛЬЮ (бургер-меню) ===
-               * — Переключение класса 'open' для анимации */
+              // Бургер-меню
               burger.addEventListener('click', () => {
                 burger.classList.toggle('open');
                 controlsPanel.classList.toggle('open');
               });
 
-              /* === ИНИЦИАЛИЗАЦИЯ UI === */
-              scaleVal.textContent = config.lineScale.toFixed(2);
-              radiusVal.textContent = config.sprayRadius;
-              densityVal.textContent = config.dotsPerTick;
-              speedFactorVal.textContent = config.speedFactor.toFixed(1);
-              paintLeftEl.textContent = config.paintLeft;
+              // Инициализация UI
+              updatePaintCounter();
             })();
           `,
         }}
