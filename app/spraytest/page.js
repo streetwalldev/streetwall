@@ -5,145 +5,56 @@ export default function HomePage() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            /* === ГЛОБАЛЬНЫЕ СТИЛИ === */
-            body { 
-              font-family: system-ui, sans-serif; 
-              margin: 0; 
-              padding: 0; 
-              overflow: hidden; 
-            }
+            body { font-family: system-ui, sans-serif; }
+            .header { text-align: center; margin: 20px 0; color: #fff; }
+            .container { display: flex; gap: 20px; padding: 0 20px; height: calc(100vh - 120px); }
+            .canvas-wrap { flex: 1; min-width: 0; position: relative; }
             canvas { 
               display: block; 
+              width: 100%; 
+              height: 100%; 
               background: #111; 
               cursor: crosshair; 
-              touch-action: none; 
-              -webkit-tap-highlight-color: transparent; 
-              user-select: none; 
+              border: 1px solid #555; 
+              border-radius: 4px; 
+              touch-action: none;
+              -webkit-tap-highlight-color: transparent;
+              user-select: none;
             }
-
-            /* === БУРГЕР-МЕНЮ + ПОДЛОЖКА ДЛЯ КРЕСТИКА === */
-            #burger {
-              position: fixed;
-              top: 16px;
-              left: 16px;
-              width: 32px;
-              height: 24px;
-              z-index: 1001;
-              cursor: pointer;
-              padding: 8px;
-              background: rgba(0,0,0,0.3);
-              border-radius: 4px;
+            .controls { 
+              width: 280px; 
+              padding: 12px; 
+              background: rgba(0,0,0,0.4); 
+              border-radius: 8px; 
+              color: #eee; 
             }
-            #burger .bar {
-              display: block;
-              width: 100%;
-              height: 3px;
-              background: #fff;
-              margin: 4px 0;
-              transition: 0.3s;
-              border-radius: 2px;
-            }
-            #burger.open .bar:nth-child(1) { 
-              transform: rotate(45deg) translate(6px, 6px); 
-              background: #ff3366;
-            }
-            #burger.open .bar:nth-child(2) { 
-              opacity: 0; 
-            }
-            #burger.open .bar:nth-child(3) { 
-              transform: rotate(-45deg) translate(6px, -6px); 
-              background: #ff3366;
-            }
-
-            /* === ПАНЕЛЬ УПРАВЛЕНИЯ (ПОЛНОСТЬЮ СКРЫТА ПО УМОЛЧАНИЮ) === */
-            #controls-panel {
-              position: fixed;
-              top: 0;
-              right: -100%;
-              width: 100%;
-              max-width: 320px;
-              height: 100vh;
-              background: rgba(30, 30, 30, 0.96);
-              border-left: 1px solid #444;
-              padding: 20px 16px;
-              color: #eee;
-              z-index: 1000;
-              overflow-y: auto;
-              transition: all 0.3s ease;
-              opacity: 0;
-              visibility: hidden;
-            }
-            #controls-panel.open {
-              right: 0;
-              opacity: 1;
-              visibility: visible;
-            }
-
-            /* === КОНТРОЛЫ — АДАПТИВНЫЕ, НЕ ВЫЛЕЗАЮТ ЗА ЭКРАН === */
-            .control-group {
-              margin-bottom: 16px;
-            }
-            label {
-              display: block;
-              margin-bottom: 6px;
-              font-size: 0.95em;
-            }
-            input[type="range"] {
-              width: calc(100% - 16px);
-              margin-left: 8px;
-            }
-            button {
-              padding: 8px 16px;
-              background: #333;
-              color: #fff;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-              font-weight: bold;
-              width: 100%;
-              margin-top: 6px;
+            .control-group { margin-bottom: 16px; }
+            label { display: block; margin-bottom: 6px; }
+            input[type="range"] { width: 100%; }
+            button { 
+              padding: 6px 12px; 
+              background: #333; 
+              color: #fff; 
+              border: none; 
+              border-radius: 4px; 
+              cursor: pointer; 
             }
             button:hover { background: #444; }
-
-            /* === ВЕРСИЯ + КОПИРАЙТ (левый нижний угол) === */
-            #version {
-              position: fixed;
-              bottom: 12px;
-              left: 12px;
-              font-size: 0.7rem;
-              opacity: 0.6;
-              color: #888;
-              z-index: 100;
-              pointer-events: none;
-              background: rgba(0,0,0,0.4);
-              padding: 2px 6px;
-              border-radius: 4px;
-            }
-
-            /* === АДАПТИВНОСТЬ === */
-            @media (min-width: 768px) {
-              #controls-panel {
-                width: 320px;
-              }
-            }
           `,
         }}
       />
 
-      <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-        <canvas id="sprayCanvas" width="1024" height="1024"></canvas>
+      <div className="header">
+        <h2>Spray Canvas</h2>
+      </div>
 
-        {/* БУРГЕР-МЕНЮ */}
-        <div id="burger">
-          <span className="bar"></span>
-          <span className="bar"></span>
-          <span className="bar"></span>
+      <div className="container">
+        <div className="canvas-wrap">
+          <canvas id="sprayCanvas" width="1024" height="1024"></canvas>
         </div>
 
-        {/* ПАНЕЛЬ УПРАВЛЕНИЯ */}
-        <div id="controls-panel">
-          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>🔧 Street Wall Spray</h3>
-
+        <div className="controls">
+          <h3>Controls</h3>
           <div className="control-group">
             <label>Цвет: <input type="color" id="colorPicker" value="#2222ff"/></label>
           </div>
@@ -171,9 +82,6 @@ export default function HomePage() {
             <label>Фон: <input type="file" id="bgImageInput" accept="image/*"/></label>
           </div>
         </div>
-
-        {/* ВЕРСИЯ + КОПИРАЙТ */}
-        <div id="version">1.2.65.49 © streetwall.art</div>
       </div>
 
       <script
@@ -195,6 +103,8 @@ export default function HomePage() {
               let isDrawing = false;
               let lastSprayPos = null;
               let lastSprayTime = null;
+              let lastX = 0;
+              let lastY = 0;
               const paintedPixels = new Set();
               const dripMap = {};
               let bgImage = null;
@@ -214,20 +124,30 @@ export default function HomePage() {
               const paintLeftEl = document.getElementById('paintLeft');
               const resetBtn = document.getElementById('resetBtn');
               const bgImageInput = document.getElementById('bgImageInput');
-              const burger = document.getElementById('burger');
-              const controlsPanel = document.getElementById('controlsPanel') || document.getElementById('controls-panel');
 
-              // === ИНИЦИАЛИЗАЦИЯ CANVAS ===
-              const dpr = window.devicePixelRatio || 1;
-              canvas.width = window.innerWidth * dpr;
-              canvas.height = window.innerHeight * dpr;
-              canvas.style.width = '100%';
-              canvas.style.height = '100%';
-              ctx.scale(dpr, dpr);
-              ctx.fillStyle = '#111';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              // === CURSOR ===
+              const cursor = document.createElement('div');
+              cursor.style.position = 'fixed';
+              cursor.style.width = '20px';
+              cursor.style.height = '20px';
+              cursor.style.borderRadius = '50%';
+              cursor.style.background = 'rgba(255, 51, 102, 0.7)';
+              cursor.style.pointerEvents = 'none';
+              cursor.style.display = 'none';
+              cursor.style.transform = 'translate(-50%, -50%)';
+              document.body.appendChild(cursor);
 
-              // === ТОЧНОЕ ПОЛУЧЕНИЕ КООРДИНАТ (исправлено) ===
+              function updateCursor(x, y) {
+                cursor.style.left = \`\${x}px\`;
+                cursor.style.top = \`\${y}px\`;
+                cursor.style.display = isDrawing ? 'block' : 'none';
+              }
+
+              // === UTILS ===
+              function getRandomInt(a, b) {
+                return Math.random() * (b - a) + a;
+              }
+
               function getCanvasCoords(e) {
                 const rect = canvas.getBoundingClientRect();
                 let clientX = e.clientX || (e.touches?.[0]?.clientX || 0);
@@ -240,13 +160,11 @@ export default function HomePage() {
                 };
               }
 
-              // === РАСХОД КРАСКИ — СИНХРОННО (без таймеров) ===
-              function consumePaint() {
-                if (config.paintLeft <= 0 && isDrawing) {
-                  isDrawing = false;
-                  alert('🎨 Краска закончилась!');
+              function redraw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (bgImage) {
+                  ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
                 }
-                paintLeftEl.textContent = config.paintLeft;
               }
 
               // === SPRAY LOGIC ===
@@ -280,7 +198,7 @@ export default function HomePage() {
                   const r = Math.random() * radiusFromSpeed;
                   const dx = Math.cos(angle) * r;
                   const dy = Math.sin(angle) * r;
-                  const size = minDot + Math.random() * (maxDot - minDot);
+                  const size = getRandomInt(dotFromSpeed * 0.85, dotFromSpeed);
 
                   ctx.globalAlpha = alphaFromSpeed * (0.8 + Math.random() * 0.3);
                   ctx.fillStyle = config.currentColor;
@@ -288,57 +206,89 @@ export default function HomePage() {
                   ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
                   ctx.fill();
 
-                  // Подтёки (упрощённо)
+                  // Подтёки
                   const cellX = Math.round(x + dx);
                   const cellY = Math.round(y + dy);
                   const cellKey = \`\${cellX}_\${cellY}\`;
                   dripMap[cellKey] = (dripMap[cellKey] || 0) + 1;
+                  const drops = dripMap[cellKey];
 
-                  // === ТОЧНЫЙ РАСХОД: только уникальные пиксели ===
+                  const threshold = Math.max(10, 14 * scale);
+                  if (drops > threshold && drops % 3 === 0) {
+                    const dripLen = Math.min(250 * scale, Math.sqrt(drops - threshold) * 4 * scale + getRandomInt(-1, 2));
+                    ctx.save();
+                    ctx.globalAlpha = 0.12 + Math.random() * 0.01;
+                    ctx.strokeStyle = config.currentColor;
+                    ctx.lineWidth = size * getRandomInt(0.7, 1.5);
+                    ctx.beginPath();
+                    ctx.moveTo(cellX + getRandomInt(-1, 1), cellY + size / 2);
+                    ctx.lineTo(cellX + getRandomInt(-1, 1), cellY + size / 2 + dripLen);
+                    ctx.stroke();
+                    ctx.restore();
+                  }
+
+                  // Расход краски
                   const px = Math.round(x + dx);
                   const py = Math.round(y + dy);
                   const key = \`\${px}_\${py}\`;
                   if (!paintedPixels.has(key)) {
                     paintedPixels.add(key);
                     config.paintLeft--;
+                    paintLeftEl.textContent = Math.max(0, config.paintLeft);
+                    if (config.paintLeft <= 0) {
+                      isDrawing = false;
+                      cursor.style.display = 'none';
+                      alert('🎨 Краска закончилась!');
+                    }
                   }
                 }
 
                 ctx.globalAlpha = 1;
                 lastSprayPos = { x, y };
                 lastSprayTime = now;
-                consumePaint(); // ← вызов сразу после расхода
               }
 
-              // === ОБРАБОТЧИКИ СОБЫТИЙ ===
+              // === EVENTS ===
               function handleStart(e) {
-                e.preventDefault();
                 if (config.paintLeft <= 0) return;
+                e.preventDefault();
                 const { x, y } = getCanvasCoords(e);
                 isDrawing = true;
+                lastX = x;
+                lastY = y;
                 sprayAt(x, y);
+                const rect = canvas.getBoundingClientRect();
+                const screenX = e.touches?.[0]?.clientX || e.clientX;
+                const screenY = e.touches?.[0]?.clientY || e.clientY;
+                updateCursor(screenX, screenY);
               }
 
               function handleMove(e) {
                 if (!isDrawing || config.paintLeft <= 0) return;
                 e.preventDefault();
                 const { x, y } = getCanvasCoords(e);
-                // Интерполяция для плавности
-                const dx = x - (lastSprayPos?.x || x);
-                const dy = y - (lastSprayPos?.y || y);
+
+                const dx = x - lastX;
+                const dy = y - lastY;
                 const dist = Math.hypot(dx, dy);
                 const steps = Math.max(1, Math.floor(dist / 4));
                 for (let i = 1; i <= steps; i++) {
-                  const nx = (lastSprayPos?.x || x) + (dx * i) / steps;
-                  const ny = (lastSprayPos?.y || y) + (dy * i) / steps;
+                  const nx = lastX + (dx * i) / steps;
+                  const ny = lastY + (dy * i) / steps;
                   sprayAt(nx, ny);
                 }
+                lastX = x;
+                lastY = y;
+
+                const rect = canvas.getBoundingClientRect();
+                const screenX = e.touches?.[0]?.clientX || e.clientX;
+                const screenY = e.touches?.[0]?.clientY || e.clientY;
+                updateCursor(screenX, screenY);
               }
 
               function handleEnd() {
                 isDrawing = false;
-                lastSprayPos = null;
-                lastSprayTime = null;
+                cursor.style.display = 'none';
               }
 
               // Подписки
@@ -348,7 +298,7 @@ export default function HomePage() {
               canvas.addEventListener('pointercancel', handleEnd);
               canvas.addEventListener('touchstart', handleStart, { passive: false });
               canvas.addEventListener('touchmove', handleMove, { passive: false });
-              canvas.addEventListener('touchend', handleEnd);
+              canvas.addEventListener('touchend', handleEnd, { passive: false });
 
               // UI
               colorPicker.addEventListener('input', () => config.currentColor = colorPicker.value);
@@ -378,8 +328,7 @@ export default function HomePage() {
                 config.paintLeft = config.paintMax;
                 paintLeftEl.textContent = config.paintLeft;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#111';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                cursor.style.display = 'none';
               });
 
               bgImageInput.addEventListener('change', (e) => {
@@ -392,20 +341,16 @@ export default function HomePage() {
                     bgImage = img;
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
+                    redraw();
                   };
                   img.src = reader.result;
                 };
                 reader.readAsDataURL(file);
               });
 
-              // === БУРГЕР-МЕНЮ ===
-              burger.addEventListener('click', () => {
-                burger.classList.toggle('open');
-                controlsPanel.classList.toggle('open');
-              });
-
-              // Init UI
+              // Init
+              ctx.fillStyle = '#111';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
               scaleVal.textContent = config.lineScale.toFixed(2);
               radiusVal.textContent = config.sprayRadius;
               densityVal.textContent = config.dotsPerTick;
