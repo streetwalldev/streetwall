@@ -173,7 +173,7 @@ export default function HomePage() {
         </div>
 
         {/* ВЕРСИЯ + КОПИРАЙТ */}
-        <div id="version">1.2.65.48 © streetwall.art</div>
+        <div id="version">1.2.65.49 © streetwall.art</div>
       </div>
 
       <script
