@@ -19,21 +19,6 @@ export default function SprayWall() {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    // Fullscreen canvas
-    const resize = () => {
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      ctx.scale(dpr, dpr);
-      // Clear with dark concrete-like bg
-      ctx.fillStyle = '#111';
-      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-    };
-
-    window.addEventListener('resize', resize);
-    resize();
-
     // Config
     const config = {
       maxPaint: 10000,
@@ -46,17 +31,34 @@ export default function SprayWall() {
     };
 
     const paintedPixels = new Set();
-
-    // Drawing state
     let isDrawing = false;
     let lastX = 0;
     let lastY = 0;
 
-    function getRandom(min, max) {
-      return Math.random() * (max - min) + min;
-    }
+    // Resize & init
+    const resize = () => {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    };
 
-    function sprayAt(x, y) {
+    const getRandom = (min, max) => Math.random() * (max - min) + min;
+
+    const getCoords = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches?.[0]?.clientX ?? e.clientX;
+      const clientY = e.touches?.[0]?.clientY ?? e.clientY;
+      return {
+        x: (clientX - rect.left) * (canvas.width / rect.width) / dpr,
+        y: (clientY - rect.top) * (canvas.height / rect.height) / dpr,
+      };
+    };
+
+    const sprayAt = (x, y) => {
       if (config.paintLeft <= 0) return;
 
       for (let i = 0; i < config.dotsPerTick; i++) {
@@ -71,40 +73,29 @@ export default function SprayWall() {
         ctx.beginPath();
         ctx.arc(x + dx, y + dy, size, 0, Math.PI * 2);
         ctx.fill();
+      }
 
-        // Drips
+      // Потребление краски — отдельно (чтобы не блокировать рендер)
+      for (let i = 0; i < config.dotsPerTick; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * config.sprayRadius;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+
         const px = Math.round(x + dx);
         const py = Math.round(y + dy);
         const key = `${px},${py}`;
         if (!paintedPixels.has(key)) {
           paintedPixels.add(key);
           config.paintLeft--;
-          if (config.paintLeft <= 0) {
-            isDrawing = false;
-          }
+          if (config.paintLeft <= 0) isDrawing = false;
         }
       }
 
       ctx.globalAlpha = 1.0;
-    }
+    };
 
-    function getCoords(e) {
-      const rect = canvas.getBoundingClientRect();
-      let clientX, clientY;
-      if (e.touches && e.touches.length) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-      return {
-        x: (clientX - rect.left) * (canvas.width / rect.width) / dpr,
-        y: (clientY - rect.top) * (canvas.height / rect.height) / dpr,
-      };
-    }
-
-    function handleStart(e) {
+    const handleStart = (e) => {
       if (config.paintLeft <= 0) return;
       e.preventDefault();
       const { x, y } = getCoords(e);
@@ -112,14 +103,13 @@ export default function SprayWall() {
       lastX = x;
       lastY = y;
       sprayAt(x, y);
-    }
+    };
 
-    function handleMove(e) {
+    const handleMove = (e) => {
       if (!isDrawing || config.paintLeft <= 0) return;
       e.preventDefault();
       const { x, y } = getCoords(e);
 
-      // Interpolate for smooth lines
       const dx = x - lastX;
       const dy = y - lastY;
       const dist = Math.hypot(dx, dy);
@@ -133,24 +123,27 @@ export default function SprayWall() {
 
       lastX = x;
       lastY = y;
-    }
+    };
 
-    function handleEnd() {
+    const handleEnd = () => {
       isDrawing = false;
-    }
+    };
 
-    // Mouse
+    // Инициализация
+    resize();
+    window.addEventListener('resize', resize);
+
+    // События
     canvas.addEventListener('pointerdown', handleStart);
     canvas.addEventListener('pointermove', handleMove);
     canvas.addEventListener('pointerup', handleEnd);
     canvas.addEventListener('pointercancel', handleEnd);
-
-    // Touch
     canvas.addEventListener('touchstart', handleStart, { passive: false });
     canvas.addEventListener('touchmove', handleMove, { passive: false });
     canvas.addEventListener('touchend', handleEnd);
 
     return () => {
+      window.removeEventListener('resize', resize);
       canvas.removeEventListener('pointerdown', handleStart);
       canvas.removeEventListener('pointermove', handleMove);
       canvas.removeEventListener('pointerup', handleEnd);
