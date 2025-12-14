@@ -23,8 +23,6 @@ export default function SprayPaintCanvas() {
   const lastPointRef = useRef({ x: null, y: null });
   const paintedPixelsRef = useRef(new Set());
   const undoStackRef = useRef([]);
-  const [config, setConfig] = useState({ ...DEFAULT_CONFIG });
-  const [paintLeft, setPaintLeft] = useState(DEFAULT_CONFIG.paintLeft);
 
   // UI state
   const [lineScale, setLineScale] = useState(DEFAULT_CONFIG.lineScale);
@@ -32,59 +30,47 @@ export default function SprayPaintCanvas() {
   const [dotsPerTick, setDotsPerTick] = useState(DEFAULT_CONFIG.dotsPerTick);
   const [speedFactor, setSpeedFactor] = useState(DEFAULT_CONFIG.speedFactor);
   const [currentColor, setCurrentColor] = useState(DEFAULT_CONFIG.currentColor);
+  const [paintLeft, setPaintLeft] = useState(DEFAULT_CONFIG.paintLeft);
 
   // Resize canvas to fit container
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
-    // Set size to parent size or fallback
     const width = canvas.parentElement?.clientWidth || 800;
     const height = canvas.parentElement?.clientHeight || 600;
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     canvas.style.width = width + "px";
     canvas.style.height = height + "px";
-    ctxRef.current = canvas.getContext("2d");
-    ctxRef.current.setTransform(1,0,0,1,0,0); // reset any transforms
-    ctxRef.current.scale(dpr, dpr);
-    // Clear on resize
-    ctxRef.current.clearRect(0,0,width,height);
+    const ctx = canvas.getContext("2d");
+    ctxRef.current = ctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
     paintedPixelsRef.current.clear();
-    setPaintLeft(config.paintLeft);
-    // eslint-disable-next-line
+    setPaintLeft(DEFAULT_CONFIG.paintLeft);
   }, []);
-
-  // Update config when UI changes
-  useEffect(() => {
-    setConfig((prev) => ({
-      ...prev,
-      lineScale,
-      sprayRadius,
-      dotsPerTick,
-      speedFactor,
-      currentColor,
-    }));
-  }, [lineScale, sprayRadius, dotsPerTick, speedFactor, currentColor]);
 
   // Spray logic
   function sprayAt(x, y) {
-    if (config.paintLeft <= 0) return;
+    if (paintLeft <= 0) return;
 
     const ctx = ctxRef.current;
     if (!ctx) return;
 
     let drops = 0;
-    for (let i = 0; i < config.dotsPerTick; i++) {
+    let used = 0;
+
+    for (let i = 0; i < dotsPerTick; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const dist = Math.random() * config.sprayRadius;
+      const dist = Math.random() * sprayRadius;
       const dx = Math.cos(angle) * dist;
       const dy = Math.sin(angle) * dist;
 
       // Spray dot
       ctx.save();
       ctx.globalAlpha = 0.22 + Math.random() * 0.18;
-      ctx.fillStyle = config.currentColor;
+      ctx.fillStyle = currentColor;
       ctx.beginPath();
       ctx.arc(x + dx, y + dy, 1.2 + Math.random() * 1.3, 0, Math.PI * 2);
       ctx.fill();
@@ -92,26 +78,25 @@ export default function SprayPaintCanvas() {
 
       // Drip effect
       drops++;
-      const threshold = Math.max(10, 14 * config.lineScale);
+      const threshold = Math.max(10, 14 * lineScale);
       if (drops > threshold && drops % 3 === 0) {
         const dripLen =
           Math.min(
-            250 * config.lineScale,
-            Math.sqrt(drops - threshold) * 4 * config.lineScale + getRandomInt(-1, 2)
+            250 * lineScale,
+            Math.sqrt(drops - threshold) * 4 * lineScale + getRandomInt(-1, 2)
           );
         ctx.save();
         ctx.globalAlpha = 0.12 + Math.random() * 0.01;
-        ctx.strokeStyle = config.currentColor;
-        ctx.lineWidth =
-          config.sprayRadius * (Math.random() * (1.5 - 0.7) + 0.7);
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = 1 + Math.random() * 2;
         ctx.beginPath();
         ctx.moveTo(
           x + dx + getRandomInt(-1, 1),
-          y + dy + config.sprayRadius / 2
+          y + dy + sprayRadius / 2
         );
         ctx.lineTo(
           x + dx + getRandomInt(-1, 1),
-          y + dy + config.sprayRadius / 2 + dripLen
+          y + dy + sprayRadius / 2 + dripLen
         );
         ctx.stroke();
         ctx.restore();
@@ -120,16 +105,19 @@ export default function SprayPaintCanvas() {
       // Paint consumption per unique pixel
       const px = Math.round(x + dx);
       const py = Math.round(y + dy);
-      const key = ${px}_${py};
+      const key = `${px}_${py}`; // ✅ ИСПРАВЛЕНО: template literal
       if (!paintedPixelsRef.current.has(key)) {
         paintedPixelsRef.current.add(key);
-        config.paintLeft--;
-        setPaintLeft(config.paintLeft);
-        if (config.paintLeft <= 0) {
-          drawingRef.current = false;
-          alert("🎨 Краска закончилась!");
-          break;
-        }
+        used++;
+      }
+    }
+
+    if (used > 0) {
+      const newPaintLeft = paintLeft - used;
+      setPaintLeft(newPaintLeft);
+      if (newPaintLeft <= 0) {
+        drawingRef.current = false;
+        alert("🎨 Краска закончилась!");
       }
     }
   }
@@ -152,9 +140,9 @@ export default function SprayPaintCanvas() {
   }
 
   function handlePointerDown(e) {
-    if (config.paintLeft <= 0) return;
+    if (paintLeft <= 0) return;
     e.preventDefault();
-    saveUndo(); // for undo feature
+    saveUndo();
     drawingRef.current = true;
     const { x, y } = getRelativeCoords(e);
     lastPointRef.current = { x, y };
@@ -166,18 +154,16 @@ export default function SprayPaintCanvas() {
   }
 
   function handlePointerMove(e) {
-    if (!drawingRef.current || config.paintLeft <= 0) return;
+    if (!drawingRef.current || paintLeft <= 0) return;
     e.preventDefault();
     const { x, y } = getRelativeCoords(e);
 
-    // Spray along the path for smoothness
     let { x: lx, y: ly } = lastPointRef.current;
     if (lx == null || ly == null) {
       lx = x; ly = y;
     }
     const dist = Math.hypot(x - lx, y - ly);
-    const steps =
-      Math.max(1, Math.floor((dist / (2 * config.sprayRadius)) * config.speedFactor));
+    const steps = Math.max(1, Math.floor(dist / (2 * sprayRadius) * speedFactor));
     for (let i = 1; i <= steps; i++) {
       const nx = lx + ((x - lx) * i) / steps;
       const ny = ly + ((y - ly) * i) / steps;
@@ -186,7 +172,7 @@ export default function SprayPaintCanvas() {
     lastPointRef.current = { x, y };
   }
 
-  function handlePointerUp(e) {
+  function handlePointerUp() {
     drawingRef.current = false;
     lastPointRef.current = { x: null, y: null };
     window.removeEventListener("pointermove", handlePointerMove);
@@ -201,16 +187,9 @@ export default function SprayPaintCanvas() {
     if (!ctx) return;
     try {
       undoStackRef.current.push(
-        ctx.getImageData(
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        )
+        ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height)
       );
-      // Limit stack size to avoid memory leak
-      if (undoStackRef.current.length > 20)
-        undoStackRef.current.shift();
+      if (undoStackRef.current.length > 20) undoStackRef.current.shift();
     } catch {}
   }
 
@@ -218,28 +197,32 @@ export default function SprayPaintCanvas() {
     if (!undoStackRef.current.length) return;
     const imageData = undoStackRef.current.pop();
     ctxRef.current.putImageData(imageData, 0, 0);
-    paintedPixelsRef.current.clear(); // can't restore painted pixels reliably
-    // Optionally restore paintLeft too (not implemented here)
+    paintedPixelsRef.current.clear(); // reset since we can't track per-pixel history easily
   }
 
   function handleClear() {
     const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!ctx || !canvas) return;
     saveUndo();
-    ctxRef.current.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     paintedPixelsRef.current.clear();
     setPaintLeft(DEFAULT_CONFIG.paintLeft);
-    setConfig({...config, paintLeft: DEFAULT_CONFIG.paintLeft});
   }
-  // Download image
+
   function handleDownload() {
-    const url = canvasRef.current.toDataURL("image/png");
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const url = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = url;
     a.download = "spray-art.png";
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   }
 
-  // UI controls handlers
+  // UI handlers
   function handleLineScale(e) { setLineScale(Number(e.target.value)); }
   function handleSprayRadius(e) { setSprayRadius(Number(e.target.value)); }
   function handleDotsPerTick(e) { setDotsPerTick(Number(e.target.value)); }
@@ -247,8 +230,8 @@ export default function SprayPaintCanvas() {
   function handleColorChange(e) { setCurrentColor(e.target.value); }
 
   return (
-    <div style={{ userSelect: "none", maxWidth: "100vw" }}>
-      <div style={{ display: "flex", gap: "1em", alignItems: "center", marginBottom: "8px" }}>
+    <div style={{ userSelect: "none", maxWidth: "100vw", padding: "10px", fontFamily: "system-ui" }}>
+      <div style={{ display: "flex", gap: "1em", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" }}>
         <label>
           Толщина:
           <input type="range" min="0.5" max="3" step="0.01" value={lineScale} onChange={handleLineScale} />
@@ -278,7 +261,15 @@ export default function SprayPaintCanvas() {
         <button onClick={handleDownload}>Скачать PNG</button>
         <span>Осталось краски: <b>{paintLeft}</b></span>
       </div>
-      <div style={{ border: "1px solid #bbb", background: "#fff", touchAction: "none", position:"relative", width:"100%", height:"70vh" }}>
+      <div style={{ 
+        border: "1px solid #444", 
+        background: "#111", 
+        touchAction: "none", 
+        position:"relative", 
+        width:"100%", 
+        height:"70vh",
+        borderRadius: "4px"
+      }}>
         <canvas
           ref={canvasRef}
           style={{
@@ -286,7 +277,6 @@ export default function SprayPaintCanvas() {
             width: "100%",
             height: "100%",
             cursor: paintLeft > 0 ? "crosshair" : "not-allowed",
-            background:"transparent"
           }}
           onPointerDown={handlePointerDown}
           onTouchStart={handlePointerDown}
@@ -295,9 +285,9 @@ export default function SprayPaintCanvas() {
           <div style={{
             position:"absolute",
             left:0,right:0,top:0,bottom:0,
-            background:"rgba(255,255,255,.7)",
-            color:"#222",
-            fontSize:"2em",
+            background:"rgba(0,0,0,0.7)",
+            color:"#fff",
+            fontSize:"1.5em",
             display:"flex",
             alignItems:"center",
             justifyContent:"center",
@@ -307,8 +297,8 @@ export default function SprayPaintCanvas() {
           </div>
         )}
       </div>
-      <div style={{fontSize:"80%", color:"#888", marginTop:"6px"}}>
-        Нарисуй граффити! Управляй цветом и параметрами спрея.
+      <div style={{fontSize:"85%", color:"#aaa", marginTop:"8px", maxWidth: "800px"}}>
+        Нарисуй граффити! Зажми мышь и води курсором — имитация аэрозольного баллончика с подтёками.
       </div>
     </div>
   );
