@@ -97,8 +97,7 @@ export default function SprayPaintCanvas() {
         const dripLen =
           Math.min(
             250 * config.lineScale,
-            Math.sqrt(drops - threshold) * 4 * config.lineScale +
-              getRandomInt(-1, 2)
+            Math.sqrt(drops - threshold) * 4 * config.lineScale + getRandomInt(-1, 2)
           );
         ctx.save();
         ctx.globalAlpha = 0.12 + Math.random() * 0.01;
@@ -231,7 +230,6 @@ export default function SprayPaintCanvas() {
     setPaintLeft(DEFAULT_CONFIG.paintLeft);
     setConfig({...config, paintLeft: DEFAULT_CONFIG.paintLeft});
   }
-
   // Download image
   function handleDownload() {
     const url = canvasRef.current.toDataURL("image/png");
@@ -243,7 +241,7 @@ export default function SprayPaintCanvas() {
 
   // UI controls handlers
   function handleLineScale(e) { setLineScale(Number(e.target.value)); }
-    function handleSprayRadius(e) { setSprayRadius(Number(e.target.value)); }
+  function handleSprayRadius(e) { setSprayRadius(Number(e.target.value)); }
   function handleDotsPerTick(e) { setDotsPerTick(Number(e.target.value)); }
   function handleSpeedFactor(e) { setSpeedFactor(Number(e.target.value)); }
   function handleColorChange(e) { setCurrentColor(e.target.value); }
