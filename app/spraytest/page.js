@@ -9,19 +9,43 @@ export default function HomePage() {
             .header { text-align: center; margin: 20px 0; color: #fff; }
             .container { display: flex; gap: 20px; padding: 0 20px; height: calc(100vh - 120px); }
             .canvas-wrap { flex: 1; min-width: 0; position: relative; }
-            canvas { display: block; width: 100%; height: 100%; background: #111; cursor: crosshair; border: 1px solid #555; border-radius: 4px; }
-            .controls { width: 280px; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 8px; color: #eee; }
+            canvas { 
+              display: block; 
+              width: 100%; 
+              height: 100%; 
+              background: #111; 
+              cursor: crosshair; 
+              border: 1px solid #555; 
+              border-radius: 4px; 
+              touch-action: none;
+              -webkit-tap-highlight-color: transparent;
+              user-select: none;
+            }
+            .controls { 
+              width: 280px; 
+              padding: 12px; 
+              background: rgba(0,0,0,0.4); 
+              border-radius: 8px; 
+              color: #eee; 
+            }
             .control-group { margin-bottom: 16px; }
             label { display: block; margin-bottom: 6px; }
             input[type="range"] { width: 100%; }
-            button { padding: 6px 12px; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+            button { 
+              padding: 6px 12px; 
+              background: #333; 
+              color: #fff; 
+              border: none; 
+              border-radius: 4px; 
+              cursor: pointer; 
+            }
             button:hover { background: #444; }
           `,
         }}
       />
 
       <div className="header">
-        <h2>🎨 Spray Canvas</h2>
+        <h2>Spray Canvas</h2>
       </div>
 
       <div className="container">
@@ -30,7 +54,7 @@ export default function HomePage() {
         </div>
 
         <div className="controls">
-          <h3>🔧 Controls</h3>
+          <h3>Controls</h3>
           <div className="control-group">
             <label>Цвет: <input type="color" id="colorPicker" value="#2222ff"/></label>
           </div>
@@ -79,6 +103,8 @@ export default function HomePage() {
               let isDrawing = false;
               let lastSprayPos = null;
               let lastSprayTime = null;
+              let lastX = 0;
+              let lastY = 0;
               const paintedPixels = new Set();
               const dripMap = {};
               let bgImage = null;
@@ -99,13 +125,33 @@ export default function HomePage() {
               const resetBtn = document.getElementById('resetBtn');
               const bgImageInput = document.getElementById('bgImageInput');
 
+              // === CURSOR ===
+              const cursor = document.createElement('div');
+              cursor.style.position = 'fixed';
+              cursor.style.width = '20px';
+              cursor.style.height = '20px';
+              cursor.style.borderRadius = '50%';
+              cursor.style.background = 'rgba(255, 51, 102, 0.7)';
+              cursor.style.pointerEvents = 'none';
+              cursor.style.display = 'none';
+              cursor.style.transform = 'translate(-50%, -50%)';
+              document.body.appendChild(cursor);
+
+              function updateCursor(x, y) {
+                cursor.style.left = \`\${x}px\`;
+                cursor.style.top = \`\${y}px\`;
+                cursor.style.display = isDrawing ? 'block' : 'none';
+              }
+
               // === UTILS ===
               function getRandomInt(a, b) {
                 return Math.random() * (b - a) + a;
               }
 
-              function getCanvasCoords(clientX, clientY) {
+              function getCanvasCoords(e) {
                 const rect = canvas.getBoundingClientRect();
+                let clientX = e.clientX || (e.touches?.[0]?.clientX || 0);
+                let clientY = e.clientY || (e.touches?.[0]?.clientY || 0);
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
                 return {
@@ -191,6 +237,7 @@ export default function HomePage() {
                     paintLeftEl.textContent = Math.max(0, config.paintLeft);
                     if (config.paintLeft <= 0) {
                       isDrawing = false;
+                      cursor.style.display = 'none';
                       alert('🎨 Краска закончилась!');
                     }
                   }
@@ -205,36 +252,55 @@ export default function HomePage() {
               function handleStart(e) {
                 if (config.paintLeft <= 0) return;
                 e.preventDefault();
-                const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+                const { x, y } = getCanvasCoords(e);
                 isDrawing = true;
+                lastX = x;
+                lastY = y;
                 sprayAt(x, y);
+                const rect = canvas.getBoundingClientRect();
+                const screenX = e.touches?.[0]?.clientX || e.clientX;
+                const screenY = e.touches?.[0]?.clientY || e.clientY;
+                updateCursor(screenX, screenY);
               }
 
               function handleMove(e) {
                 if (!isDrawing || config.paintLeft <= 0) return;
                 e.preventDefault();
-                const { x, y } = getCanvasCoords(e.clientX, e.clientY);
-                sprayAt(x, y);
+                const { x, y } = getCanvasCoords(e);
+
+                const dx = x - lastX;
+                const dy = y - lastY;
+                const dist = Math.hypot(dx, dy);
+                const steps = Math.max(1, Math.floor(dist / 4));
+                for (let i = 1; i <= steps; i++) {
+                  const nx = lastX + (dx * i) / steps;
+                  const ny = lastY + (dy * i) / steps;
+                  sprayAt(nx, ny);
+                }
+                lastX = x;
+                lastY = y;
+
+                const rect = canvas.getBoundingClientRect();
+                const screenX = e.touches?.[0]?.clientX || e.clientX;
+                const screenY = e.touches?.[0]?.clientY || e.clientY;
+                updateCursor(screenX, screenY);
               }
 
               function handleEnd() {
                 isDrawing = false;
-                lastSprayPos = null;
-                lastSprayTime = null;
+                cursor.style.display = 'none';
               }
 
-              // Canvas events
+              // Подписки
               canvas.addEventListener('pointerdown', handleStart);
               canvas.addEventListener('pointermove', handleMove);
               canvas.addEventListener('pointerup', handleEnd);
               canvas.addEventListener('pointercancel', handleEnd);
-
-              // Touch (for mobile/trackpad)
               canvas.addEventListener('touchstart', handleStart, { passive: false });
               canvas.addEventListener('touchmove', handleMove, { passive: false });
-              canvas.addEventListener('touchend', handleEnd);
+              canvas.addEventListener('touchend', handleEnd, { passive: false });
 
-              // UI events
+              // UI
               colorPicker.addEventListener('input', () => config.currentColor = colorPicker.value);
               scaleRange.addEventListener('input', () => {
                 config.lineScale = parseFloat(scaleRange.value);
@@ -262,6 +328,7 @@ export default function HomePage() {
                 config.paintLeft = config.paintMax;
                 paintLeftEl.textContent = config.paintLeft;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                cursor.style.display = 'none';
               });
 
               bgImageInput.addEventListener('change', (e) => {
@@ -281,7 +348,9 @@ export default function HomePage() {
                 reader.readAsDataURL(file);
               });
 
-              // Init UI
+              // Init
+              ctx.fillStyle = '#111';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
               scaleVal.textContent = config.lineScale.toFixed(2);
               radiusVal.textContent = config.sprayRadius;
               densityVal.textContent = config.dotsPerTick;
