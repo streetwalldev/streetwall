@@ -11,6 +11,30 @@ export default function SprayWall() {
   }, []);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+  if (!canvas) {
+    console.error('❌ Canvas ref is null');
+    return;
+  }
+
+  const handleStart = (e) => {
+    console.log('✅ Pointer down:', e.type, e.clientX, e.clientY);
+    // ... ваш код
+  };
+
+  const handleMove = (e) => {
+    console.log('🖱️ Pointer move'); // Только факт вызова
+    // ... ваш код
+  };
+
+  canvas.addEventListener('pointerdown', handleStart);
+  canvas.addEventListener('pointermove', handleMove);
+
+  return () => {
+    canvas.removeEventListener('pointerdown', handleStart);
+    canvas.removeEventListener('pointermove', handleMove);
+  };
+}, []);
     if (!isClient) return;
 
     const canvas = canvasRef.current;
