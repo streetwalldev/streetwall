@@ -27,9 +27,8 @@ export default function HomePage() {
              * — Фиксированный размер (32×24px), центрирован по вертикали */
             #burger {
               position: fixed;
-              top: 50%;
+              top: 16px;
               left: 16px;
-              transform: translateY(-50%);
               width: 32px;
               height: 24px;
               z-index: 1001;
@@ -62,9 +61,8 @@ export default function HomePage() {
              * — Горизонтальный отступ: left: 16px (бургер) + 32px (ширина) + 8px = 56px */
             #paintCounter {
               position: fixed;
-              top: 50%;
-              left: 56px;
-              transform: translateY(-50%);
+              top: 25px;
+              left: 64px;
               font-size: 0.75rem;
               opacity: 0.9;
               color: #fff;
@@ -219,7 +217,7 @@ export default function HomePage() {
         </div>
 
         {/* === ВЕРСИЯ + КОПИРАЙТ === */}
-        <div id="version">1.2.71.54 © streetwall.art</div>
+        <div id="version">1.2.72.55 © streetwall.art</div>
       </div>
 
       <script
