@@ -114,7 +114,7 @@ export default function HomePage() {
       </div>
 
       {/* Подключаем пресеты */}
-      <script src="/cans.js"></script>
+      <script src="public/cans.js"></script>
 
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
@@ -122,7 +122,7 @@ export default function HomePage() {
           const config = {
             paintMax: 2000000,
             paintLeft: 2000000,
-            currentColor: '#ff3366',
+            currentColor: 'gray',
             currentCan: 'basic',
             currentMode: 0, // 0–3
             dripMap: {},
