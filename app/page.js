@@ -47,9 +47,9 @@ export default function Home() {
         backgroundColor: '#111',
       }}>
         <img 
-          src="/placeholder.png" 
+          src="https://raw.githubusercontent.com/streetwalldev/streetwall/main/public/placeholder.png"
           alt="preview"
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
 
@@ -61,7 +61,7 @@ export default function Home() {
         borderRadius: '6px',
         margin: '8px',
       }}>
-        🔔 Notify Me in Telegram
+        Notify Me in Telegram
       </a>
 
       <a href="/spraytest" style={{
@@ -71,7 +71,7 @@ export default function Home() {
         textDecoration: 'none',
         borderRadius: '4px',
       }}>
-        🎨 Try Spray Tool
+        Try Spray Tool
       </a>
     </main>
   );
