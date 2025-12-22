@@ -1,7 +1,7 @@
 // app/page.js
 export default function HomePage() {
   return (
-    <div style={{ margin: 0, padding: 0, background: '#000', minHeight: '100vh', color: '#fff' }}>
+    <div style={{ margin: 0, padding: 0, background: '#000', minHeight: '100vh', color: '#fff', overflowX: 'auto' }}>
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -22,10 +22,9 @@ export default function HomePage() {
               border-radius: 4px;
             }
 
-            /* === АДАПТИВ: БУРГЕР И ПАНЕЛЬ === */
+            /* === АДАПТИВ === */
             @media (max-width: 700px) {
               #burger { display: block; }
-              #paintCounter { left: 64px !important; }
               #controls-panel {
                 right: -100%;
                 opacity: 0;
@@ -36,23 +35,28 @@ export default function HomePage() {
                 opacity: 1;
                 visibility: visible;
               }
-              #desktop-controls { display: none !important; }
+              /* Канвас НЕ сжимается — появляется скролл */
+              #canvas-container {
+                width: 1024px;
+                height: 1024px;
+              }
             }
 
             @media (min-width: 701px) {
               #burger { display: none !important; }
-              #paintCounter { left: 24px !important; top: 24px !important; }
-              #mobile-controls { display: none !important; }
-              #desktop-controls {
+              #controls-panel {
+                right: 0 !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                border-left: 1px solid #333;
+              }
+              /* Канвас фиксированных размеров, отступ слева */
+              #canvas-container {
                 position: absolute;
-                top: 50%;
-                right: 100px;
-                transform: translateY(-50%);
-                background: rgba(20,20,20,0.8);
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 280px;
-                color: #eee;
+                top: 20px;
+                left: 20px;
+                width: 1024px;
+                height: 1024px;
               }
             }
 
@@ -104,16 +108,14 @@ export default function HomePage() {
               font-weight: bold;
             }
 
-            /* === МОБИЛЬНАЯ ПАНЕЛЬ УПРАВЛЕНИЯ === */
+            /* === ПАНЕЛЬ УПРАВЛЕНИЯ === */
             #controls-panel {
               position: fixed;
               top: 0;
               right: 0;
-              width: 100%;
-              max-width: 320px;
+              width: 320px;
               height: 100vh;
               background: rgba(15,15,15,0.96);
-              border-left: 1px solid #333;
               padding: 24px 16px;
               color: #eee;
               z-index: 1000;
@@ -121,12 +123,7 @@ export default function HomePage() {
               transition: all 0.3s ease;
             }
 
-            /* === ДЕСКТОПНЫЕ КОНТРОЛЫ (справа от canvas) === */
-            #desktop-controls h3 {
-              margin-top: 0;
-              margin-bottom: 20px;
-              font-size: 1.1rem;
-            }
+            /* === КОНТРОЛЫ === */
             .control-group { margin-bottom: 16px; }
             label { display: block; margin-bottom: 6px; font-size: 0.95em; color: #ccc; }
             input[type="range"] { width: 100%; margin-top: 4px; }
@@ -176,23 +173,15 @@ export default function HomePage() {
       />
 
       {/* === КОРНЕВОЙ КОНТЕЙНЕР === */}
-      <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-        {/* CANVAS */}
-        <canvas 
-          id="sprayCanvas" 
-          width="1024" 
-          height="1024"
-          style={{ 
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '90vw',
-            height: '80vh',
-            maxWidth: '1024px',
-            maxHeight: '1024px'
-          }}
-        ></canvas>
+      <div style={{ position: 'relative', width: 'max-content', minWidth: '100vw', height: '100vh' }}>
+        {/* КАНВАС — привязан к левому краю */}
+        <div id="canvas-container">
+          <canvas 
+            id="sprayCanvas" 
+            width="1024" 
+            height="1024"
+          ></canvas>
+        </div>
 
         {/* БУРГЕР (только мобильный) */}
         <div id="burger">
@@ -201,15 +190,15 @@ export default function HomePage() {
           <span className="bar"></span>
         </div>
 
-        {/* СЧЁТЧИК — на месте бургера */}
+        {/* СЧЁТЧИК */}
         <div id="paintCounter">2000000</div>
 
         {/* КУРСОР */}
         <div id="customCursor"></div>
 
-        {/* МОБИЛЬНОЕ МЕНЮ */}
+        {/* ПАНЕЛЬ УПРАВЛЕНИЯ (единая, адаптивная) */}
         <div id="controls-panel">
-          <h3>🔧 Spray Controls</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>🎨 Spray Controls</h3>
           <div className="control-group">
             <label>Цвет: <input type="color" id="colorPicker" value="#ff3366"/></label>
           </div>
@@ -238,39 +227,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ДЕСКТОПНЫЕ КОНТРОЛЫ (справа от canvas) */}
-        <div id="desktop-controls">
-          <h3>🎨 Spray</h3>
-          <div className="control-group">
-            <label>Цвет: <input type="color" id="colorPicker2" value="#ff3366"/></label>
-          </div>
-          <div className="control-group">
-            <label>Line Scale: <span id="scaleVal2">1.00</span></label>
-            <input type="range" id="scaleRange2" min="0.1" max="1.0" step="0.05" value="1.0"/>
-          </div>
-          <div className="control-group">
-            <label>Радиус: <span id="radiusVal2">30</span> px</label>
-            <input type="range" id="radiusRange2" min="10" max="100" value="30"/>
-          </div>
-          <div className="control-group">
-            <label>Плотность: <span id="densityVal2">556</span></label>
-            <input type="range" id="densityRange2" min="50" max="2000" value="556"/>
-          </div>
-          <div className="control-group">
-            <label>Скорость: <span id="speedFactorVal2">7.0</span></label>
-            <input type="range" id="speedFactor2" min="1" max="20" step="0.5" value="7"/>
-          </div>
-          <div className="control-group">
-            <label>Краски: <span id="paintLeft2">2000000</span></label>
-            <button id="resetBtn2">Очистить</button>
-          </div>
-          <div className="control-group">
-            <label>Фон: <input type="file" id="bgImageInput2" accept="image/*"/></label>
-          </div>
-        </div>
-
         {/* ВЕРСИЯ */}
-        <div id="version">1.3.83.64 © streetwall.art</div>
+        <div id="version">1.3.84.65 © streetwall.art</div>
       </div>
 
       <script
@@ -298,40 +256,20 @@ export default function HomePage() {
               ctx.fillStyle = '#000';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-              // DOM elements (mobile + desktop)
-              const dom = {
-                color: ['#colorPicker', '#colorPicker2'],
-                scale: ['#scaleRange', '#scaleRange2'],
-                radius: ['#radiusRange', '#radiusRange2'],
-                density: ['#densityRange', '#densityRange2'],
-                speed: ['#speedFactor', '#speedFactor2'],
-                scaleVal: ['#scaleVal', '#scaleVal2'],
-                radiusVal: ['#radiusVal', '#radiusVal2'],
-                densityVal: ['#densityVal', '#densityVal2'],
-                speedVal: ['#speedFactorVal', '#speedFactorVal2'],
-                paint: ['#paintLeft', '#paintLeft2'],
-                counter: '#paintCounter',
-                reset: ['#resetBtn', '#resetBtn2'],
-                bg: ['#bgImageInput', '#bgImageInput2'],
-                burger: '#burger',
-                panel: '#controls-panel'
-              };
-
               function $(sel) { return document.querySelector(sel); }
 
-              // Sync UI ↔ config
               function syncUI() {
-                dom.color.forEach(id => $(id).value = config.currentColor);
-                dom.scale.forEach(id => $(id).value = config.lineScale);
-                dom.radius.forEach(id => $(id).value = config.sprayRadius);
-                dom.density.forEach(id => $(id).value = config.dotsPerTick);
-                dom.speed.forEach(id => $(id).value = config.speedFactor);
-                dom.scaleVal.forEach(el => el.textContent = config.lineScale.toFixed(2));
-                dom.radiusVal.forEach(el => el.textContent = config.sprayRadius);
-                dom.densityVal.forEach(el => el.textContent = config.dotsPerTick);
-                dom.speedVal.forEach(el => el.textContent = config.speedFactor.toFixed(1));
-                dom.paint.forEach(el => el.textContent = config.paintLeft);
-                $(dom.counter).textContent = config.paintLeft;
+                $('$colorPicker').value = config.currentColor;
+                $('$scaleRange').value = config.lineScale;
+                $('$radiusRange').value = config.sprayRadius;
+                $('$densityRange').value = config.dotsPerTick;
+                $('$speedFactor').value = config.speedFactor;
+                $('$scaleVal').textContent = config.lineScale.toFixed(2);
+                $('$radiusVal').textContent = config.sprayRadius;
+                $('$densityVal').textContent = config.dotsPerTick;
+                $('$speedFactorVal').textContent = config.speedFactor.toFixed(1);
+                $('$paintLeft').textContent = config.paintLeft;
+                $('$paintCounter').textContent = config.paintLeft;
               }
 
               function getCanvasCoords(e) {
@@ -418,29 +356,29 @@ export default function HomePage() {
               ['touchmove', 'mousemove'].forEach(t => canvas.addEventListener(t, handleMove, {passive: false}));
               ['touchend', 'mouseup', 'mouseleave'].forEach(t => canvas.addEventListener(t, handleEnd));
 
-              // UI listeners
-              dom.color.forEach(id => $(id).addEventListener('input', e => {
+              // UI
+              $('$colorPicker').addEventListener('input', e => {
                 config.currentColor = e.target.value;
                 syncUI();
-              }));
-              dom.scale.forEach(id => $(id).addEventListener('input', e => {
+              });
+              $('$scaleRange').addEventListener('input', e => {
                 config.lineScale = parseFloat(e.target.value);
                 syncUI();
-              }));
-              dom.radius.forEach(id => $(id).addEventListener('input', e => {
+              });
+              $('$radiusRange').addEventListener('input', e => {
                 config.sprayRadius = parseInt(e.target.value);
                 syncUI();
-              }));
-              dom.density.forEach(id => $(id).addEventListener('input', e => {
+              });
+              $('$densityRange').addEventListener('input', e => {
                 config.dotsPerTick = parseInt(e.target.value);
                 syncUI();
-              }));
-              dom.speed.forEach(id => $(id).addEventListener('input', e => {
+              });
+              $('$speedFactor').addEventListener('input', e => {
                 config.speedFactor = parseFloat(e.target.value);
                 syncUI();
-              }));
+              });
 
-              dom.reset.forEach(id => $(id).addEventListener('click', () => {
+              $('$resetBtn').addEventListener('click', () => {
                 paintedPixels.clear();
                 Object.keys(dripMap).forEach(k => delete dripMap[k]);
                 config.paintLeft = config.paintMax;
@@ -449,9 +387,9 @@ export default function HomePage() {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 syncUI();
-              }));
+              });
 
-              dom.bg.forEach(id => $(id).addEventListener('change', e => {
+              $('$bgImageInput').addEventListener('change', e => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const url = URL.createObjectURL(file);
@@ -461,14 +399,13 @@ export default function HomePage() {
                   URL.revokeObjectURL(url);
                 };
                 img.src = url;
-              }));
-
-              $(dom.burger)?.addEventListener('click', () => {
-                $(dom.burger).classList.toggle('open');
-                $(dom.panel).classList.toggle('open');
               });
 
-              // Init
+              $('$burger')?.addEventListener('click', () => {
+                $('$burger').classList.toggle('open');
+                $('$controls-panel').classList.toggle('open');
+              });
+
               syncUI();
             })();
           `,
