@@ -35,7 +35,6 @@ export default function HomePage() {
                 opacity: 1;
                 visibility: visible;
               }
-              /* Канвас НЕ сжимается — появляется скролл */
               #canvas-container {
                 width: 1024px;
                 height: 1024px;
@@ -50,7 +49,6 @@ export default function HomePage() {
                 visibility: visible !important;
                 border-left: 1px solid #333;
               }
-              /* Канвас фиксированных размеров, отступ слева */
               #canvas-container {
                 position: absolute;
                 top: 20px;
@@ -172,31 +170,20 @@ export default function HomePage() {
         }}
       />
 
-      {/* === КОРНЕВОЙ КОНТЕЙНЕР === */}
       <div style={{ position: 'relative', width: 'max-content', minWidth: '100vw', height: '100vh' }}>
-        {/* КАНВАС — привязан к левому краю */}
         <div id="canvas-container">
-          <canvas 
-            id="sprayCanvas" 
-            width="1024" 
-            height="1024"
-          ></canvas>
+          <canvas id="sprayCanvas" width="1024" height="1024"></canvas>
         </div>
 
-        {/* БУРГЕР (только мобильный) */}
         <div id="burger">
           <span className="bar"></span>
           <span className="bar"></span>
           <span className="bar"></span>
         </div>
 
-        {/* СЧЁТЧИК */}
         <div id="paintCounter">2000000</div>
-
-        {/* КУРСОР */}
         <div id="customCursor"></div>
 
-        {/* ПАНЕЛЬ УПРАВЛЕНИЯ (единая, адаптивная) */}
         <div id="controls-panel">
           <h3 style={{ marginTop: 0, marginBottom: '20px' }}>🎨 Spray Controls</h3>
           <div className="control-group">
@@ -227,14 +214,14 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ВЕРСИЯ */}
-        <div id="version">1.3.84.65 © streetwall.art</div>
+        <div id="version">1.3.83.66 © streetwall.art</div>
       </div>
 
       <script
         dangerouslySetInnerHTML={{
           __html: `
             (function() {
+              // === КОНФИГ ===
               const config = {
                 sprayRadius: 30,
                 dotsPerTick: 556,
@@ -245,33 +232,48 @@ export default function HomePage() {
                 currentColor: '#ff3366'
               };
 
+              // === СОСТОЯНИЕ ===
               let isDrawing = false;
               let lastSprayPos = null;
               let lastSprayTime = null;
               const paintedPixels = new Set();
               const dripMap = {};
 
+              // === DOM ===
               const canvas = document.getElementById('sprayCanvas');
               const ctx = canvas.getContext('2d');
+              const colorPicker = document.getElementById('colorPicker');
+              const scaleRange = document.getElementById('scaleRange');
+              const radiusRange = document.getElementById('radiusRange');
+              const densityRange = document.getElementById('densityRange');
+              const speedFactorInput = document.getElementById('speedFactor');
+              const scaleVal = document.getElementById('scaleVal');
+              const radiusVal = document.getElementById('radiusVal');
+              const densityVal = document.getElementById('densityVal');
+              const speedFactorVal = document.getElementById('speedFactorVal');
+              const paintLeftEl = document.getElementById('paintLeft');
+              const paintCounter = document.getElementById('paintCounter');
+              const resetBtn = document.getElementById('resetBtn');
+              const bgImageInput = document.getElementById('bgImageInput');
+              const burger = document.getElementById('burger');
+              const controlsPanel = document.getElementById('controls-panel');
+              const customCursor = document.getElementById('customCursor');
+
+              // === ИНИЦИАЛИЗАЦИЯ ХОЛСТА ===
               ctx.fillStyle = '#000';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-              function $(sel) { return document.querySelector(sel); }
-
-              function syncUI() {
-                $('$colorPicker').value = config.currentColor;
-                $('$scaleRange').value = config.lineScale;
-                $('$radiusRange').value = config.sprayRadius;
-                $('$densityRange').value = config.dotsPerTick;
-                $('$speedFactor').value = config.speedFactor;
-                $('$scaleVal').textContent = config.lineScale.toFixed(2);
-                $('$radiusVal').textContent = config.sprayRadius;
-                $('$densityVal').textContent = config.dotsPerTick;
-                $('$speedFactorVal').textContent = config.speedFactor.toFixed(1);
-                $('$paintLeft').textContent = config.paintLeft;
-                $('$paintCounter').textContent = config.paintLeft;
+              // === UPDATE UI (только счётчики) ===
+              function updateUI() {
+                paintLeftEl.textContent = config.paintLeft;
+                paintCounter.textContent = config.paintLeft;
+                scaleVal.textContent = config.lineScale.toFixed(2);
+                radiusVal.textContent = config.sprayRadius;
+                densityVal.textContent = config.dotsPerTick;
+                speedFactorVal.textContent = config.speedFactor.toFixed(1);
               }
 
+              // === КООРДИНАТЫ ===
               function getCanvasCoords(e) {
                 const rect = canvas.getBoundingClientRect();
                 const clientX = e.touches?.[0]?.clientX || e.clientX;
@@ -284,47 +286,64 @@ export default function HomePage() {
                 };
               }
 
+              // === РАСПЫЛЕНИЕ ===
               function sprayAt(x, y) {
                 if (config.paintLeft <= 0) return;
+
                 const now = performance.now();
                 let speed = 0;
-                if (lastSprayPos && lastSprayTime) {
+                if (lastSprayPos && lastSprayTime !== null) {
                   const dt = now - lastSprayTime;
                   const dist = Math.hypot(x - lastSprayPos.x, y - lastSprayPos.y);
                   speed = Math.min(1, dist / (dt || 1) / config.speedFactor);
                 }
 
-                const r = config.sprayRadius * (0.7 + 2.3 * speed);
-                for (let i = 0; i < config.dotsPerTick; i++) {
-                  const a = Math.random() * 2 * Math.PI;
-                  const dx = Math.cos(a) * Math.random() * r;
-                  const dy = Math.sin(a) * Math.random() * r;
-                  const s = 1 + Math.random() * 2;
+                const minRadius = config.sprayRadius * 0.7 * config.lineScale;
+                const maxRadius = config.sprayRadius * 3 * config.lineScale;
+                const radiusFromSpeed = minRadius + (maxRadius - minRadius) * speed;
 
-                  ctx.globalAlpha = 0.12 + Math.random() * 0.48;
+                const minDot = 0.7 * config.lineScale;
+                const maxDot = 1.1 * config.lineScale;
+                const dotFromSpeed = maxDot - (maxDot - minDot) * speed;
+
+                for (let i = 0; i < config.dotsPerTick; i++) {
+                  const angle = Math.random() * 2 * Math.PI;
+                  const r = Math.random() * radiusFromSpeed;
+                  const dx = Math.cos(angle) * r;
+                  const dy = Math.sin(angle) * r;
+                  const size = minDot + Math.random() * (maxDot - minDot);
+
+                  ctx.globalAlpha = 0.15 + Math.random() * 0.4;
                   ctx.fillStyle = config.currentColor;
                   ctx.beginPath();
-                  ctx.arc(x + dx, y + dy, s, 0, 2 * Math.PI);
+                  ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
                   ctx.fill();
                 }
 
-                const key = Math.round(x) + '_' + Math.round(y);
+                // Расход краски — уникальные пиксели
+                const px = Math.round(x);
+                const py = Math.round(y);
+                const key = px + '_' + py;
                 if (!paintedPixels.has(key)) {
                   paintedPixels.add(key);
                   config.paintLeft--;
                 }
-                syncUI();
-                if (config.paintLeft <= 0) alert('🎨 Краска закончилась!');
 
-                lastSprayPos = {x, y};
+                if (config.paintLeft <= 0) {
+                  alert('🎨 Краска закончилась!');
+                }
+
+                updateUI();
+                lastSprayPos = { x, y };
                 lastSprayTime = now;
                 ctx.globalAlpha = 1;
               }
 
+              // === ОБРАБОТЧИКИ ===
               function handleStart(e) {
                 e.preventDefault();
                 if (config.paintLeft <= 0) return;
-                const {x, y} = getCanvasCoords(e);
+                const { x, y } = getCanvasCoords(e);
                 isDrawing = true;
                 sprayAt(x, y);
                 updateCursor(e);
@@ -333,52 +352,65 @@ export default function HomePage() {
               function handleMove(e) {
                 if (!isDrawing) return;
                 e.preventDefault();
-                const {x, y} = getCanvasCoords(e);
+                const { x, y } = getCanvasCoords(e);
                 sprayAt(x, y);
                 updateCursor(e);
               }
 
               function handleEnd() {
                 isDrawing = false;
-                $('$customCursor').style.display = 'none';
+                customCursor.style.display = 'none';
               }
 
               function updateCursor(e) {
                 const x = e.clientX || (e.touches?.[0]?.clientX || 0);
                 const y = e.clientY || (e.touches?.[0]?.clientY || 0);
-                $('$customCursor').style.left = x + 'px';
-                $('$customCursor').style.top = y + 'px';
-                $('$customCursor').style.display = 'block';
+                customCursor.style.left = x + 'px';
+                customCursor.style.top = y + 'px';
+                customCursor.style.display = 'block';
               }
 
-              // Events
-              ['touchstart', 'mousedown'].forEach(t => canvas.addEventListener(t, handleStart, {passive: false}));
-              ['touchmove', 'mousemove'].forEach(t => canvas.addEventListener(t, handleMove, {passive: false}));
-              ['touchend', 'mouseup', 'mouseleave'].forEach(t => canvas.addEventListener(t, handleEnd));
+              // Подписки на события canvas
+              ['touchstart', 'mousedown'].forEach(type =>
+                canvas.addEventListener(type, handleStart, { passive: false })
+              );
+              ['touchmove', 'mousemove'].forEach(type =>
+                canvas.addEventListener(type, handleMove, { passive: false })
+              );
+              ['touchend', 'mouseup', 'mouseleave'].forEach(type =>
+                canvas.addEventListener(type, handleEnd)
+              );
 
-              // UI
-              $('$colorPicker').addEventListener('input', e => {
+              // Закрытие панели при клике на canvas (мобильный)
+              canvas.addEventListener('click', () => {
+                if (window.innerWidth <= 700) {
+                  burger.classList.remove('open');
+                  controlsPanel.classList.remove('open');
+                }
+              });
+
+              // === UI ЛОГИКА ===
+              colorPicker.addEventListener('input', (e) => {
                 config.currentColor = e.target.value;
-                syncUI();
-              });
-              $('$scaleRange').addEventListener('input', e => {
-                config.lineScale = parseFloat(e.target.value);
-                syncUI();
-              });
-              $('$radiusRange').addEventListener('input', e => {
-                config.sprayRadius = parseInt(e.target.value);
-                syncUI();
-              });
-              $('$densityRange').addEventListener('input', e => {
-                config.dotsPerTick = parseInt(e.target.value);
-                syncUI();
-              });
-              $('$speedFactor').addEventListener('input', e => {
-                config.speedFactor = parseFloat(e.target.value);
-                syncUI();
               });
 
-              $('$resetBtn').addEventListener('click', () => {
+              scaleRange.addEventListener('input', (e) => {
+                config.lineScale = parseFloat(e.target.value);
+              });
+
+              radiusRange.addEventListener('input', (e) => {
+                config.sprayRadius = parseInt(e.target.value);
+              });
+
+              densityRange.addEventListener('input', (e) => {
+                config.dotsPerTick = parseInt(e.target.value);
+              });
+
+              speedFactorInput.addEventListener('input', (e) => {
+                config.speedFactor = parseFloat(e.target.value);
+              });
+
+              resetBtn.addEventListener('click', () => {
                 paintedPixels.clear();
                 Object.keys(dripMap).forEach(k => delete dripMap[k]);
                 config.paintLeft = config.paintMax;
@@ -386,10 +418,11 @@ export default function HomePage() {
                 lastSprayTime = null;
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                syncUI();
+                updateUI();
               });
 
-              $('$bgImageInput').addEventListener('change', e => {
+              // Загрузка фона
+              bgImageInput.addEventListener('change', (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const url = URL.createObjectURL(file);
@@ -401,12 +434,16 @@ export default function HomePage() {
                 img.src = url;
               });
 
-              $('$burger')?.addEventListener('click', () => {
-                $('$burger').classList.toggle('open');
-                $('$controls-panel').classList.toggle('open');
-              });
+              // Бургер-меню (только мобильный)
+              if (burger) {
+                burger.addEventListener('click', () => {
+                  burger.classList.toggle('open');
+                  controlsPanel.classList.toggle('open');
+                });
+              }
 
-              syncUI();
+              // Инициализация
+              updateUI();
             })();
           `,
         }}
