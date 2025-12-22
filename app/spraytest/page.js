@@ -18,7 +18,7 @@ export default function HomePage() {
               cursor: crosshair; 
               touch-action: none; 
               user-select: none; 
-              border: 1px dashed #343434; /* ← усилена контрастность */
+              border: 1px dashed #343434;
               border-radius: 4px;
             }
 
@@ -185,7 +185,7 @@ export default function HomePage() {
         <div id="customCursor"></div>
 
         <div id="controls-panel">
-          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>🎨 Spray Controls</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Spray Controls</h3>
           <div className="control-group">
             <label>Цвет: <input type="color" id="colorPicker" value="#ff3366"/></label>
           </div>
@@ -214,7 +214,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div id="version">1.3.83.67 © streetwall.art</div>
+        <div id="version">1.3.84.68 © streetwall.art</div>
       </div>
 
       <script
@@ -307,7 +307,7 @@ export default function HomePage() {
                   const size = minDot + Math.random() * (maxDot - minDot);
 
                   ctx.globalAlpha = 0.15 + Math.random() * 0.4;
-                  ctx.fillStyle = config.currentColor; // ← берётся из config, обновляется мгновенно
+                  ctx.fillStyle = config.currentColor;
                   ctx.beginPath();
                   ctx.arc(x + dx, y + dy, size, 0, 2 * Math.PI);
                   ctx.fill();
@@ -322,7 +322,7 @@ export default function HomePage() {
                 }
 
                 if (config.paintLeft <= 0) {
-                  alert('🎨 Краска закончилась!');
+                  alert('Краска закончилась!');
                 }
 
                 updateUI();
@@ -378,27 +378,34 @@ export default function HomePage() {
                 }
               });
 
-              // ✅ Превью цвета теперь обновляется мгновенно
               colorPicker.addEventListener('input', (e) => {
                 config.currentColor = e.target.value;
-                // Sync native color picker preview (браузер сам делает это, но на всякий)
                 colorPicker.value = e.target.value;
               });
 
+              // ✅ ИСПРАВЛЕНО: обновление .value и UI
               scaleRange.addEventListener('input', (e) => {
                 config.lineScale = parseFloat(e.target.value);
+                scaleRange.value = config.lineScale; // ← синхронизация UI
+                updateUI();
               });
 
               radiusRange.addEventListener('input', (e) => {
                 config.sprayRadius = parseInt(e.target.value);
+                radiusRange.value = config.sprayRadius; // ← синхронизация UI
+                updateUI();
               });
 
               densityRange.addEventListener('input', (e) => {
                 config.dotsPerTick = parseInt(e.target.value);
+                densityRange.value = config.dotsPerTick; // ← синхронизация UI
+                updateUI();
               });
 
               speedFactorInput.addEventListener('input', (e) => {
                 config.speedFactor = parseFloat(e.target.value);
+                speedFactorInput.value = config.speedFactor; // ← синхронизация UI
+                updateUI();
               });
 
               resetBtn.addEventListener('click', () => {
