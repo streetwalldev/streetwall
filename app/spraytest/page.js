@@ -181,7 +181,7 @@ export default function HomePage() {
           <span className="bar"></span>
         </div>
 
-        <div id="paintCounter">4000</div>
+        <div id="paintCounter">8000</div>
         <div id="customCursor"></div>
 
         <div id="controls-panel">
@@ -199,14 +199,14 @@ export default function HomePage() {
           </div>
           <div className="control-group">
             <label>Плотность: <span id="densityVal">3600</span></label>
-            <input type="range" id="densityRange" min="50" max="4000" value="3600"/>
+            <input type="range" id="densityRange" min="50" max="8000" value="3600"/>
           </div>
           <div className="control-group">
             <label>Скорость: <span id="speedFactorVal">3.5</span></label>
             <input type="range" id="speedFactor" min="1" max="20" step="0.5" value="3.5"/>
           </div>
           <div className="control-group">
-            <label>Краски: <span id="paintLeft">4000</span></label>
+            <label>Краски: <span id="paintLeft">8000</span></label>
             <button id="resetBtn">Очистить</button>
           </div>
           <div className="control-group">
@@ -214,7 +214,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div id="version">1.3.84.68 © streetwall.art</div>
+        <div id="version">1.3.85.69 © streetwall.art</div>
       </div>
 
       <script
@@ -226,8 +226,8 @@ export default function HomePage() {
                 dotsPerTick: 3600,
                 speedFactor: 3.5,
                 lineScale: 0.7,
-                paintMax: 4000,
-                paintLeft: 4000,
+                paintMax: 8000,
+                paintLeft: 8000,
                 currentColor: '#ff3366'
               };
 
