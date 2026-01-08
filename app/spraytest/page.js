@@ -18,7 +18,7 @@ export default function HomePage() {
               cursor: crosshair; 
               touch-action: none; 
               user-select: none; 
-              border: 1px dashed rgba(100,100,100,0.2);
+              border: 1px dashed #343434;
               border-radius: 4px;
             }
 
@@ -153,18 +153,18 @@ export default function HomePage() {
               border-radius: 4px;
             }
 
-            /* === КУРСОР === */
+            /* === КАСТОМНЫЙ КУРСОР — РОЗОВЫЙ КРУГ 16×16 === */
             #customCursor {
               position: fixed;
-              width: 6px;
-              height: 6px;
+              width: 16px;
+              height: 16px;
               border-radius: 50%;
-              background: rgba(255, 51, 102, 0.8);
+              background: #ff3366;
               pointer-events: none;
               transform: translate(-50%, -50%);
               z-index: 1000;
               display: none;
-              box-shadow: 0 0 4px rgba(255, 51, 102, 0.7);
+              box-shadow: 0 0 6px rgba(255, 51, 102, 0.6);
             }
           `,
         }}
@@ -185,7 +185,7 @@ export default function HomePage() {
         <div id="customCursor"></div>
 
         <div id="controls-panel">
-          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>🎨 Spray Controls</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Spray Controls</h3>
           <div className="control-group">
             <label>Цвет: <input type="color" id="colorPicker" value="#ff3366"/></label>
           </div>
@@ -214,14 +214,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div id="version">1.3.83.66 © streetwall.art</div>
+        <div id="version">1.3.84.68 © streetwall.art</div>
       </div>
 
       <script
         dangerouslySetInnerHTML={{
           __html: `
             (function() {
-              // === КОНФИГ ===
               const config = {
                 sprayRadius: 30,
                 dotsPerTick: 556,
@@ -232,14 +231,12 @@ export default function HomePage() {
                 currentColor: '#ff3366'
               };
 
-              // === СОСТОЯНИЕ ===
               let isDrawing = false;
               let lastSprayPos = null;
               let lastSprayTime = null;
               const paintedPixels = new Set();
               const dripMap = {};
 
-              // === DOM ===
               const canvas = document.getElementById('sprayCanvas');
               const ctx = canvas.getContext('2d');
               const colorPicker = document.getElementById('colorPicker');
@@ -259,11 +256,9 @@ export default function HomePage() {
               const controlsPanel = document.getElementById('controls-panel');
               const customCursor = document.getElementById('customCursor');
 
-              // === ИНИЦИАЛИЗАЦИЯ ХОЛСТА ===
               ctx.fillStyle = '#000';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-              // === UPDATE UI (только счётчики) ===
               function updateUI() {
                 paintLeftEl.textContent = config.paintLeft;
                 paintCounter.textContent = config.paintLeft;
@@ -273,7 +268,6 @@ export default function HomePage() {
                 speedFactorVal.textContent = config.speedFactor.toFixed(1);
               }
 
-              // === КООРДИНАТЫ ===
               function getCanvasCoords(e) {
                 const rect = canvas.getBoundingClientRect();
                 const clientX = e.touches?.[0]?.clientX || e.clientX;
@@ -286,7 +280,6 @@ export default function HomePage() {
                 };
               }
 
-              // === РАСПЫЛЕНИЕ ===
               function sprayAt(x, y) {
                 if (config.paintLeft <= 0) return;
 
@@ -320,7 +313,6 @@ export default function HomePage() {
                   ctx.fill();
                 }
 
-                // Расход краски — уникальные пиксели
                 const px = Math.round(x);
                 const py = Math.round(y);
                 const key = px + '_' + py;
@@ -330,7 +322,7 @@ export default function HomePage() {
                 }
 
                 if (config.paintLeft <= 0) {
-                  alert('🎨 Краска закончилась!');
+                  alert('Краска закончилась!');
                 }
 
                 updateUI();
@@ -339,7 +331,6 @@ export default function HomePage() {
                 ctx.globalAlpha = 1;
               }
 
-              // === ОБРАБОТЧИКИ ===
               function handleStart(e) {
                 e.preventDefault();
                 if (config.paintLeft <= 0) return;
@@ -370,7 +361,6 @@ export default function HomePage() {
                 customCursor.style.display = 'block';
               }
 
-              // Подписки на события canvas
               ['touchstart', 'mousedown'].forEach(type =>
                 canvas.addEventListener(type, handleStart, { passive: false })
               );
@@ -381,7 +371,6 @@ export default function HomePage() {
                 canvas.addEventListener(type, handleEnd)
               );
 
-              // Закрытие панели при клике на canvas (мобильный)
               canvas.addEventListener('click', () => {
                 if (window.innerWidth <= 700) {
                   burger.classList.remove('open');
@@ -389,25 +378,34 @@ export default function HomePage() {
                 }
               });
 
-              // === UI ЛОГИКА ===
               colorPicker.addEventListener('input', (e) => {
                 config.currentColor = e.target.value;
+                colorPicker.value = e.target.value;
               });
 
+              // ✅ ИСПРАВЛЕНО: обновление .value и UI
               scaleRange.addEventListener('input', (e) => {
                 config.lineScale = parseFloat(e.target.value);
+                scaleRange.value = config.lineScale; // ← синхронизация UI
+                updateUI();
               });
 
               radiusRange.addEventListener('input', (e) => {
                 config.sprayRadius = parseInt(e.target.value);
+                radiusRange.value = config.sprayRadius; // ← синхронизация UI
+                updateUI();
               });
 
               densityRange.addEventListener('input', (e) => {
                 config.dotsPerTick = parseInt(e.target.value);
+                densityRange.value = config.dotsPerTick; // ← синхронизация UI
+                updateUI();
               });
 
               speedFactorInput.addEventListener('input', (e) => {
                 config.speedFactor = parseFloat(e.target.value);
+                speedFactorInput.value = config.speedFactor; // ← синхронизация UI
+                updateUI();
               });
 
               resetBtn.addEventListener('click', () => {
@@ -421,7 +419,6 @@ export default function HomePage() {
                 updateUI();
               });
 
-              // Загрузка фона
               bgImageInput.addEventListener('change', (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -434,7 +431,6 @@ export default function HomePage() {
                 img.src = url;
               });
 
-              // Бургер-меню (только мобильный)
               if (burger) {
                 burger.addEventListener('click', () => {
                   burger.classList.toggle('open');
@@ -442,7 +438,6 @@ export default function HomePage() {
                 });
               }
 
-              // Инициализация
               updateUI();
             })();
           `,
