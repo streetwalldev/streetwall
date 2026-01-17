@@ -94,7 +94,7 @@ export default function HomePage() {
             #paintCounter {
               position: fixed;
               top: 25px;
-              left: 64px;
+              left: 32px;
               font-size: 0.75rem;
               opacity: 0.9;
               color: #fff;
@@ -142,7 +142,7 @@ export default function HomePage() {
             #version {
               position: fixed;
               bottom: 12px;
-              left: 12px;
+              left: 32px;
               font-size: 0.7rem;
               opacity: 0.5;
               color: #666;
@@ -181,7 +181,7 @@ export default function HomePage() {
           <span className="bar"></span>
         </div>
 
-        <div id="paintCounter">2000000</div>
+        <div id="paintCounter">8000</div>
         <div id="customCursor"></div>
 
         <div id="controls-panel">
@@ -190,23 +190,23 @@ export default function HomePage() {
             <label>Цвет: <input type="color" id="colorPicker" value="#ff3366"/></label>
           </div>
           <div className="control-group">
-            <label>Line Scale: <span id="scaleVal">1.00</span></label>
-            <input type="range" id="scaleRange" min="0.1" max="1.0" step="0.05" value="1.0"/>
+            <label>Line Scale: <span id="scaleVal">0.70</span></label>
+            <input type="range" id="scaleRange" min="0.1" max="1.0" step="0.05" value="0.7"/>
           </div>
           <div className="control-group">
             <label>Радиус: <span id="radiusVal">30</span> px</label>
             <input type="range" id="radiusRange" min="10" max="100" value="30"/>
           </div>
           <div className="control-group">
-            <label>Плотность: <span id="densityVal">556</span></label>
-            <input type="range" id="densityRange" min="50" max="2000" value="556"/>
+            <label>Плотность: <span id="densityVal">3600</span></label>
+            <input type="range" id="densityRange" min="50" max="8000" value="3600"/>
           </div>
           <div className="control-group">
-            <label>Скорость: <span id="speedFactorVal">7.0</span></label>
-            <input type="range" id="speedFactor" min="1" max="20" step="0.5" value="7"/>
+            <label>Скорость: <span id="speedFactorVal">3.5</span></label>
+            <input type="range" id="speedFactor" min="1" max="20" step="0.5" value="3.5"/>
           </div>
           <div className="control-group">
-            <label>Краски: <span id="paintLeft">2000000</span></label>
+            <label>Краски: <span id="paintLeft">8000</span></label>
             <button id="resetBtn">Очистить</button>
           </div>
           <div className="control-group">
@@ -214,7 +214,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div id="version">1.3.84.68 © streetwall.art</div>
+        <div id="version">1.3.85.69 © streetwall.art</div>
       </div>
 
       <script
@@ -223,11 +223,11 @@ export default function HomePage() {
             (function() {
               const config = {
                 sprayRadius: 30,
-                dotsPerTick: 556,
-                speedFactor: 7,
-                lineScale: 1.0,
-                paintMax: 2000000,
-                paintLeft: 2000000,
+                dotsPerTick: 3600,
+                speedFactor: 3.5,
+                lineScale: 0.7,
+                paintMax: 8000,
+                paintLeft: 8000,
                 currentColor: '#ff3366'
               };
 
@@ -446,3 +446,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+
