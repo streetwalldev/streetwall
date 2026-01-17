@@ -1,7 +1,7 @@
+// app/spraytest/page.js
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
 import Head from 'next/head';
 
 export default function CollectiveDrawingPage() {
@@ -9,47 +9,55 @@ export default function CollectiveDrawingPage() {
   const [name, setName] = useState('');
   const [isNameSet, setIsNameSet] = useState(false);
   const [users, setUsers] = useState({});
-  const [drawing, setDrawing] = useState([]); // Added for local state management of drawings
+  const [drawing, setDrawing] = useState([]);
   const socketRef = useRef(null);
 
+  // Инициализация Socket.IO только в браузере
   useEffect(() => {
-    // Initialize socket connection
-    socketRef.current = io(process.env.NEXT_PUBLIC_SOCKET_URL);
+    // Проверка, что мы в браузере
+    if (typeof window === 'undefined') return;
 
-    socketRef.current.on('user-update', (updatedUsers) => {
-      setUsers(updatedUsers);
+    // Динамический импорт socket.io-client
+    let SocketIO;
+    import('socket.io-client').then((module) => {
+      SocketIO = module.default || module;
+      const socket = SocketIO(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001');
+      socketRef.current = socket;
+
+      socket.on('user-update', (updatedUsers) => {
+        setUsers(updatedUsers);
+      });
+
+      socket.on('draw', ({ x, y, color }) => {
+        const ctx = canvasRef.current?.getContext('2d');
+        if (!ctx) return;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        setDrawing(prev => [...prev, { x, y, color }]);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }).catch(err => {
+      console.error('Socket.IO failed to load:', err);
     });
-
-    socketRef.current.on('draw', ({ x, y, color, userId }) => {
-      const ctx = canvasRef.current.getContext('2d');
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Update local drawing state
-      setDrawing((prevDrawing) => [...prevDrawing, { x, y, color }]);
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
   }, []);
 
   useEffect(() => {
-    if (isNameSet) {
+    if (isNameSet && socketRef.current) {
       socketRef.current.emit('set-name', name);
     }
   }, [isNameSet, name]);
 
   const handleMouseMove = (event) => {
-    if (!isNameSet) return;
-
+    if (!isNameSet || !socketRef.current) return;
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-
     socketRef.current.emit('cursor-move', { x, y });
   };
 
@@ -69,15 +77,16 @@ export default function CollectiveDrawingPage() {
     const y = event.clientY - rect.top;
 
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'red'; // Example color
+    ctx.fillStyle = '#ff3366';
     ctx.beginPath();
     ctx.arc(x, y, 5, 0, 2 * Math.PI);
     ctx.fill();
 
-    // Update local drawing state
-    setDrawing((prevDrawing) => [...prevDrawing, { x, y, color: 'red' }]);
-
-    socketRef.current.emit('draw', { x, y, color: 'red' });
+    setDrawing(prev => [...prev, { x, y, color: '#ff3366' }]);
+    
+    if (socketRef.current) {
+      socketRef.current.emit('draw', { x, y, color: '#ff3366' });
+    }
   };
 
   return (
@@ -92,7 +101,7 @@ export default function CollectiveDrawingPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Введите ваше имя"
+            placeholder="Ваше имя"
             style={{ padding: '5px', fontSize: '16px' }}
           />
         </header>
@@ -100,7 +109,7 @@ export default function CollectiveDrawingPage() {
           ref={canvasRef}
           width={1024}
           height={768}
-          style={{ display: 'block', margin: '0 auto', background: '#fff' }}
+          style={{ display: 'block', margin: '0 auto', background: '#111' }}
           onMouseMove={handleMouseMove}
           onClick={handleCanvasClick}
         />
@@ -112,8 +121,10 @@ export default function CollectiveDrawingPage() {
               left: user.x,
               top: user.y,
               transform: 'translate(-50%, -50%)',
-              color: 'white',
+              color: '#fff',
               pointerEvents: 'none',
+              fontSize: '12px',
+              textShadow: '0 0 4px #000',
             }}
           >
             {user.name}
