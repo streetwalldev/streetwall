@@ -214,7 +214,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div id="version">1.3.85.69 © streetwall.art</div>
+        <div id="version">1.3.71 © streetwall.art</div>
       </div>
 
       <script
@@ -446,5 +446,4 @@ export default function HomePage() {
     </div>
   );
 }
-
 
