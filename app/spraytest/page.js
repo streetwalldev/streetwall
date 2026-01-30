@@ -19,7 +19,7 @@ export default function SprayTestPage() {
   const [actualSpeedFactor, setActualSpeedFactor] = useState(1.5);
   
   // Текущий активный пресет
-  const [activePreset, setActivePreset] = useState('50cm');
+  const [activePreset, setActivePreset] = useState('Big');
   
   // Ref для доступа к DOM элементам
   const scaleValRef = useRef(null);
@@ -33,55 +33,54 @@ export default function SprayTestPage() {
 
   // Обновленные пресеты с улучшенным пресетом 10см
   const presets = {
-    '50cm': { 
-      name: '50cm',
-      scaleVal: 0.65, 
-      radiusVal: 45, 
-      densityVal: 5600,
-      speedFactor: 1.5,
-      description: 'Рисунок с расстояния 50 см',
+    'Big': { 
+      name: 'Big',
+      scaleVal: 0.8,  
+      densityVal: 3500,
+      speedFactor: 2.5,
+      description: 'Распыление с расстояния 50 см',
       paintConsumption: 1,
       enableDrips: false,
       // Динамические параметры при уменьшении краски
-      minRadius: 45,   // При paintLeft = 1000000
+      minRadius: 50,   // При paintLeft = 1000000
       maxRadius: 65,   // При paintLeft = 100000
       minDensity: 2000, // При paintLeft = 100000
-      maxDensity: 5600  // При paintLeft = 1000000
+      maxDensity: 5000  // При paintLeft = 1000000
     },
-    '25cm': { 
-      name: '25cm',
-      description: 'Рисунок с расстояния 25 см',
-      scaleVal: 0.65, 
+    'Mid': { 
+      name: 'Mid',
+      description: 'Распыление с расстояния 25 см',
+      scaleVal: 0.8, 
       radiusVal: 20, 
       densityVal: 3000,
-      speedFactor: 2.0,
+      speedFactor: 3.0,
       paintConsumption: 2,
       enableDrips: false,
       dripDelay: 0.5,
       // Динамические параметры при уменьшении краски
       minDensity: 1500,  // При paintLeft = 100000
-      maxDensity: 3000,  // При paintLeft = 1000000
+      maxDensity: 3500,  // При paintLeft = 1000000
       minSpeedFactor: 1.5, // При paintLeft = 100000
-      maxSpeedFactor: 2.0  // При paintLeft = 1000000
+      maxSpeedFactor: 3.0  // При paintLeft = 1000000
     },
-    '10cm': { 
-      name: '10cm',
-      description: 'Рисунок с расстояния 10 см (очень детализировано)',
-      scaleVal: 0.85,   // Увеличил для большего контроля
-      radiusVal: 6,     // Чуть меньше радиуса для точности
-      densityVal: 12000, // Высокая плотность для детализации
-      speedFactor: 4,   // Более чувствительный
+    'Small': { 
+      name: 'Small',
+      description: 'Распыление с расстояния 10 см (очень детализировано)',
+      scaleVal: 1,   // Увеличил для большего контроля
+      radiusVal: 14,     // Чуть меньше радиуса для точности
+      densityVal: 6000, // Высокая плотность для детализации
+      speedFactor: 5,   // Более чувствительный
       // Динамические параметры при уменьшении краски
-      minSpeedFactor: 2.0, // Минимум
-      maxSpeedFactor: 6.0, // Максимум
+      minSpeedFactor: 6.0, // Минимум
+      maxSpeedFactor: 7.0, // Максимум
       // Подтёки - более деликатные
       enableDrips: true,
-      dripDelay: 0.3,      // Быстрее появляются
-      dripLength: 0.8,     // Короче
-      dripMaxLength: 3,    // Макс длина
-      dripAlpha: 0.4,      // Прозрачнее
-      dripChance: 0.08,    // Реже
-      dripWidth: 0.5,      // Тоньше
+      dripDelay: 1,      // Быстрее появляются
+      dripLength: 100,     // Короче
+      dripMaxLength: 100,    // Макс длина
+      dripAlpha: 0.9,      // Прозрачнее
+      dripChance: 1,    // Реже
+      dripWidth: 0.1,      // Тоньше
       dripWidthVariation: 0.2,
       // Новые параметры для реализма
       cloudShape: 'elliptical', // Форма облака
@@ -90,8 +89,8 @@ export default function SprayTestPage() {
       edgeFog: true,            // Туманный край
       paintConsumption: 4       // Больше краски для детализации
     },
-    'grunt': { 
-      name: 'Grunt',
+    'Roll': { 
+      name: 'Roll',
       description: 'Грунтовка валиком',
       scaleVal: 1, 
       radiusVal: 100, // Ширина валика (15px) + размытие
@@ -116,7 +115,7 @@ export default function SprayTestPage() {
     
     const paintPercentage = paintRemaining / 1000000; // 0.0 - 1.0
     
-    if (presetKey === '50cm') {
+    if (presetKey === 'Big') {
       // Для 50cm: радиус и плотность меняются от 1000000 до 100000
       if (paintRemaining <= 100000) {
         return {
@@ -137,7 +136,7 @@ export default function SprayTestPage() {
       };
     }
     
-    if (presetKey === '25cm') {
+    if (presetKey === 'Mid') {
       // Для 25cm: плотность и speedFactor меняются
       if (paintRemaining <= 100000) {
         return {
@@ -158,7 +157,7 @@ export default function SprayTestPage() {
       };
     }
     
-    if (presetKey === '10cm') {
+    if (presetKey === 'Small') {
       // Для 10cm: speedFactor меняется
       if (paintRemaining <= 100000) {
         return {
@@ -333,7 +332,7 @@ export default function SprayTestPage() {
   // Инициализация системы при загрузке
   useEffect(() => {
     // Применяем пресет 50cm при загрузке
-    applyPreset('50cm');
+    applyPreset('Big');
   }, []);
 
   // Обновление фактических параметров при изменении базовых через слайдеры
@@ -472,13 +471,14 @@ export default function SprayTestPage() {
             button { 
               padding: 8px 16px;
               background: #333;
+              margin-top: 8px;
               color: #fff;
               border: none;
-              border-radius: 4px;
+              border-radius: 24px;
               cursor: pointer;
               font-weight: bold;
               width: 100%;
-              margin-top: 6px;
+          
             }
             button:hover { background: #444; }
             /* === ВЕРСИЯ === */
@@ -500,6 +500,7 @@ export default function SprayTestPage() {
               margin-top: 20px;
               padding: 15px;
               background: rgba(255, 255, 255, 0.1);
+              margin-bottom: 32px;
               border-radius: 10px;
               text-align: center;
               cursor: pointer;
@@ -515,7 +516,7 @@ export default function SprayTestPage() {
               height: 160px;
               margin: 0 auto 10px;
               background: #333;
-              border-radius: 40px 40px 20px 20px;
+              border-radius: 40px 40px 10px 10px;
               position: relative;
               overflow: hidden;
               border: 2px solid #555;
@@ -526,7 +527,7 @@ export default function SprayTestPage() {
               width: 100%;
               background: linear-gradient(to top, var(--current-color, #ff3366), var(--current-color-light, #ff6699));
               transition: height 0.5s ease;
-              border-radius: 0 0 20px 20px;
+              border-radius: 0 0 8px 8px;
             }
             .can-info {
               font-size: 12px;
@@ -572,15 +573,15 @@ export default function SprayTestPage() {
             /* === ПРЕСЕТЫ === */
             .presets-container {
               position: fixed;
-              top: 16px;
+              top: 32px;
               left: 50%;
               transform: translateX(-50%);
               display: flex;
-              gap: 10px;
+              gap: 8px;
               z-index: 1000;
-              background: rgba(0,0,0,0.7);
-              padding: 8px 16px;
-              border-radius: 20px;
+              //background: rgba(0,0,0,0.7);
+              padding: 8px;
+              border-radius: 38px;
               backdrop-filter: blur(5px);
             }
             .preset-button {
@@ -588,7 +589,7 @@ export default function SprayTestPage() {
               background: rgba(255, 255, 255, 0.1);
               color: #aaa;
               border: 1px solid transparent;
-              border-radius: 5px;
+              border-radius: 16px;
               cursor: pointer;
               transition: all 0.2s ease;
               font-size: 0.9rem;
@@ -597,7 +598,7 @@ export default function SprayTestPage() {
             .preset-button.active {
               background: rgba(255, 51, 102, 0.3);
               color: #fff;
-              border-color: #ff3366;
+              //border-color: #ff3366;
             }
             .preset-button:hover {
               background: rgba(255, 255, 255, 0.2);
@@ -607,7 +608,7 @@ export default function SprayTestPage() {
               display: inline-block;
               margin-left: 5px;
               font-size: 10px;
-              color: #ff3366;
+              color: hsl(64, 100%, 50%);
               animation: drip-pulse 1s infinite;
             }
             @keyframes drip-pulse {
@@ -671,7 +672,7 @@ export default function SprayTestPage() {
               onClick={() => applyPreset(key)}
             >
               {presets[key].name}
-              {key === '10cm' || key === 'grunt' ? (
+              {key === '1' || key === '2' ? (
                 <span className="drip-indicator" title="Включены подтёки">💧</span>
               ) : null}
             </button>
@@ -725,24 +726,24 @@ export default function SprayTestPage() {
               
               {presets[activePreset]?.description}
             </div>
-            {activePreset === '50cm' && paintLeft <= 200000 && (
+            {activePreset === 'Big' && paintLeft <= 200000 && (
               <div className="dynamic-info">
                 Динамика: радиус ↑ {radiusVal}px, плотность ↓ {densityVal}
               </div>
             )}
-            {activePreset === '25cm' && paintLeft <= 200000 && (
+            {activePreset === 'Mid' && paintLeft <= 200000 && (
               <div className="dynamic-info">
                 Динамика: плотность ↓ {densityVal}, скорость ↓ {speedFactorVal.toFixed(1)}
               </div>
             )}
-            {activePreset === '10cm' && paintLeft <= 200000 && (
+            {activePreset === 'Small' && paintLeft <= 200000 && (
               <div className="dynamic-info">
                 Динамика: скорость ↑ {speedFactorVal.toFixed(1)}
               </div>
             )}
-            {activePreset === 'grunt' && (
+            {activePreset === 'Roll' && (
               <div className="dynamic-info">
-                Режим: валик 15×50px, расход: {presets['grunt'].paintConsumption}px
+                Режим: валик 15×50px, расход: {presets['Roll'].paintConsumption}px
               </div>
             )}
             {showColorPicker && (
@@ -846,7 +847,7 @@ export default function SprayTestPage() {
           </div>
         </div>
         
-        <div id="version">1.4.72 © streetwall.art</div>
+        <div id="version">1.5.73 © streetwall.art</div>
       </div>
 
       <script
@@ -868,10 +869,10 @@ export default function SprayTestPage() {
               let dynamicDensity = ${actualDensity};
               let dynamicSpeed = ${actualSpeed};
               let dynamicSpeedFactor = ${actualSpeedFactor};
-              let currentPreset = '50cm';
+              let currentPreset = 'Big';
               let enableDrips = false;
               let paintConsumption = 1;
-              let presetConfig = ${JSON.stringify(presets['50cm'])};
+              let presetConfig = ${JSON.stringify(presets['Big'])};
               
               let isDrawing = false;
               let lastSprayPos = null;
@@ -1434,9 +1435,9 @@ export default function SprayTestPage() {
                 lastStaticSprayPos = null; // Сбрасываем при новом нажатии
                 staticSprayStartTime = null;
                 
-                if (currentPreset === 'grunt') {
+                if (currentPreset === 'Roll') {
                   sprayWithRoller(x, y);
-                } else if (currentPreset === '10cm') {
+                } else if (currentPreset === 'Small') {
                   sprayAt10cm(x, y); // Специальная функция для 10см
                 } else {
                   sprayAt(x, y); // Стандартная для остальных
@@ -1450,9 +1451,9 @@ export default function SprayTestPage() {
                 e.preventDefault();
                 const { x, y } = getCanvasCoords(e);
                 
-                if (currentPreset === 'grunt') {
+                if (currentPreset === 'Roll') {
                   sprayWithRoller(x, y);
-                } else if (currentPreset === '10cm') {
+                } else if (currentPreset === 'Small') {
                   sprayAt10cm(x, y); // Специальная функция для 10см
                 } else {
                   sprayAt(x, y); // Стандартная для остальных
